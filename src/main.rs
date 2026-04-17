@@ -1,3 +1,5 @@
+mod math;
+
 use std::fs::File;
 
 use image::{ImageFormat, Rgb, RgbImage};

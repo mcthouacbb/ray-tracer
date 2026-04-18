@@ -6,53 +6,53 @@ pub struct Vec3 {
 }
 
 impl Vec3 {
-    const ZERO: Self = Self::new(0.0, 0.0, 0.0);
+    pub const ZERO: Self = Self::new(0.0, 0.0, 0.0);
 
-    const fn new(x: f32, y: f32, z: f32) -> Self {
+    pub const fn new(x: f32, y: f32, z: f32) -> Self {
         Self { elems: [x, y, z] }
     }
 
-    fn from_value(v: f32) -> Self {
+    pub fn from_value(v: f32) -> Self {
         Self { elems: [v, v, v] }
     }
 
-    fn x(&self) -> f32 {
+    pub fn x(&self) -> f32 {
         self.elems[0]
     }
 
-    fn y(&self) -> f32 {
+    pub fn y(&self) -> f32 {
         self.elems[1]
     }
 
-    fn z(&self) -> f32 {
+    pub fn z(&self) -> f32 {
         self.elems[2]
     }
 
-    fn x_mut(&mut self) -> &mut f32 {
+    pub fn x_mut(&mut self) -> &mut f32 {
         &mut self.elems[0]
     }
 
-    fn y_mut(&mut self) -> &mut f32 {
+    pub fn y_mut(&mut self) -> &mut f32 {
         &mut self.elems[1]
     }
 
-    fn z_mut(&mut self) -> &mut f32 {
+    pub fn z_mut(&mut self) -> &mut f32 {
         &mut self.elems[2]
     }
 
-    fn sqr_len(&self) -> f32 {
+    pub fn sqr_len(&self) -> f32 {
         self.x() * self.x() + self.y() * self.y() + self.z() * self.z()
     }
 
-    fn len(&self) -> f32 {
+    pub fn len(&self) -> f32 {
         self.sqr_len().sqrt()
     }
 
-    fn normalized(&self) -> Self {
+    pub fn normalized(&self) -> Self {
         *self / self.len()
     }
 
-    fn min(&self, b: &Self) -> Self {
+    pub fn min(&self, b: &Self) -> Self {
         Self::new(
             self.x().min(b.x()),
             self.y().min(b.y()),
@@ -60,7 +60,7 @@ impl Vec3 {
         )
     }
 
-    fn max(&self, b: &Self) -> Self {
+    pub fn max(&self, b: &Self) -> Self {
         Self::new(
             self.x().max(b.x()),
             self.y().max(b.y()),
@@ -68,11 +68,11 @@ impl Vec3 {
         )
     }
 
-    fn dot(&self, b: &Self) -> f32 {
+    pub fn dot(&self, b: &Self) -> f32 {
         self.x() * b.x() + self.y() * b.y() + self.z() * b.z()
     }
 
-    fn cross(&self, b: &Self) -> Vec3 {
+    pub fn cross(&self, b: &Self) -> Vec3 {
         return Vec3::new(
             self.y() * b.z() - self.z() * b.y(),
             self.z() * b.x() - self.x() * b.z(),

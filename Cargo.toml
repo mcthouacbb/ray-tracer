@@ -6,4 +6,5 @@ edition = "2024"
 [dependencies]
 assert_float_eq = "1.2.0"
 image = "0.25.10"
+indicatif = "0.18.4"
 rand = "0.10.1"

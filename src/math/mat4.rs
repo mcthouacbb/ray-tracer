@@ -150,7 +150,10 @@ impl Mul<Mat4> for Mat4 {
 
 #[cfg(test)]
 mod tests {
-    use crate::math::{Mat4, Vec4};
+    use core::f32;
+
+    use crate::math::{Mat4, Vec3, Vec4};
+    use assert_float_eq::assert_float_absolute_eq;
     use rand::{RngExt, SeedableRng, rngs::Xoshiro256PlusPlus};
 
     fn gen_rand(rng: &mut impl RngExt, n: usize) -> Vec<f32> {
@@ -185,6 +188,7 @@ mod tests {
         }
     }
 
+    #[test]
     fn test_mul() {
         let mut rng = Xoshiro256PlusPlus::seed_from_u64(2918237);
         let rand = gen_rand(&mut rng, 4);
@@ -213,5 +217,91 @@ mod tests {
             ),
             mat.mul_vec(vec)
         );
+
+        let rand = gen_rand(&mut rng, 48);
+        let mat = Mat4::from_elems(&rand[0..16]);
+        let mat2 = Mat4::from_elems(&rand[16..32]);
+        let mat3 = Mat4::from_elems(&rand[32..48]);
+
+        let mat_a = (mat * mat2) * mat3;
+        let mat_b = mat * (mat2 * mat3);
+        for i in 0..16 {
+            assert_float_absolute_eq!(mat_a.index_raw(i), mat_b.index_raw(i));
+        }
+
+        let vecA = mat * (mat2 * (mat3 * vec));
+        let vecB = mat_b * vec;
+        assert_float_absolute_eq!(vecA.x(), vecB.x());
+        assert_float_absolute_eq!(vecA.y(), vecB.y());
+        assert_float_absolute_eq!(vecA.z(), vecB.z());
+        assert_float_absolute_eq!(vecA.w(), vecB.w());
+    }
+
+    #[test]
+    fn test_rotation() {
+        let mat = Mat4::rotate_x(f32::consts::PI / 4.0);
+        let vec = Vec4::new(1.0, 0.0, 0.0, 1.0);
+        assert_eq!(mat * vec, vec);
+
+        let vec = Vec4::new(1.0, 1.0, 0.0, 1.0);
+        let result = mat * vec;
+        assert_eq!(result.x(), 1.0);
+        assert_float_absolute_eq!(result.y(), f32::consts::FRAC_1_SQRT_2);
+        assert_float_absolute_eq!(result.y(), f32::consts::FRAC_1_SQRT_2);
+        assert_eq!(result.w(), 1.0);
+
+        let mat2 = Mat4::rotate_z(f32::consts::PI / 4.0);
+
+        let result = mat2 * vec;
+        assert_float_absolute_eq!(result.x(), 0.0);
+        assert_float_absolute_eq!(result.y(), f32::consts::SQRT_2);
+        assert_eq!(result.z(), 0.0);
+        assert_eq!(result.w(), 1.0);
+
+        let mat3 = mat * mat2;
+        let result = mat3 * vec;
+        assert_float_absolute_eq!(result.x(), 0.0);
+        assert_float_absolute_eq!(result.y(), 1.0);
+        assert_float_absolute_eq!(result.z(), 1.0);
+        assert_eq!(result.w(), 1.0);
+
+        let result2 = mat * (mat2 * vec);
+        assert_float_absolute_eq!(result2.x(), result.x());
+        assert_float_absolute_eq!(result2.y(), result.y());
+        assert_float_absolute_eq!(result2.z(), result.z());
+        assert_eq!(result2.w(), result.w());
+
+        let inv = mat3.transpose();
+        let identity = mat3 * inv;
+        for i in 0..16 {
+            assert_float_absolute_eq!(identity.index_raw(i), Mat4::IDENTITY.index_raw(i));
+        }
+    }
+
+    #[test]
+    fn test_translation() {
+        let mut rng = Xoshiro256PlusPlus::seed_from_u64(2838741);
+        let rand = gen_rand(&mut rng, 9);
+        let mut vec = Vec4::new(rand[0], rand[1], rand[2], 1.0);
+
+        let mat1 = Mat4::translate(Vec3::new(rand[3], rand[4], rand[5]));
+        let mat2 = Mat4::translate(Vec3::new(rand[6], rand[7], rand[8]));
+
+        let result = mat1 * vec;
+        assert_float_absolute_eq!(result.x(), rand[0] + rand[3]);
+        assert_float_absolute_eq!(result.y(), rand[1] + rand[4]);
+        assert_float_absolute_eq!(result.z(), rand[2] + rand[5]);
+        assert_float_absolute_eq!(result.w(), 1.0);
+
+        let result_a = mat1 * mat2 * vec;
+        let result_b = mat2 * mat1 * vec;
+        assert_float_absolute_eq!(result_a.x(), result_b.x());
+        assert_float_absolute_eq!(result_a.y(), result_b.y());
+        assert_float_absolute_eq!(result_a.z(), result_b.z());
+        assert_float_absolute_eq!(result_a.w(), result_b.w());
+
+        *vec.w_mut() = 0.0;
+        let result = mat1 * mat2 * vec;
+        assert_eq!(result, vec);
     }
 }

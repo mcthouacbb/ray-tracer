@@ -30,7 +30,7 @@ pub fn render_image(image: &mut RgbImage) {
             let ray = Ray::new(CAMERA_POS, ray_dir);
             let hit = Sphere::new(Vec3::new(0.0, 0.0, -1.0), 0.5).trace(&ray);
             let color = if hit.t() < f32::INFINITY {
-                *hit.normal() * 0.5 + Vec3::from_value(0.5)
+                hit.normal() * 0.5 + Vec3::from_value(0.5)
             } else {
                 scene_color(&ray)
             };

@@ -11,12 +11,12 @@ impl Ray {
         Self { origin, dir }
     }
 
-    pub fn origin(&self) -> &Vec3 {
-        &self.origin
+    pub fn origin(&self) -> Vec3 {
+        self.origin
     }
 
-    pub fn dir(&self) -> &Vec3 {
-        &self.dir
+    pub fn dir(&self) -> Vec3 {
+        self.dir
     }
 }
 
@@ -46,7 +46,7 @@ impl RayHit {
         self.t
     }
 
-    pub fn normal(&self) -> &Vec3 {
-        &self.normal
+    pub fn normal(&self) -> Vec3 {
+        self.normal
     }
 }

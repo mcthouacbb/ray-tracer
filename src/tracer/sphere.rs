@@ -1,4 +1,7 @@
-use crate::math::Vec3;
+use crate::{
+    math::Vec3,
+    tracer::ray::{Ray, RayHit},
+};
 
 #[derive(Debug, Clone, Copy)]
 pub struct Sphere {
@@ -17,5 +20,21 @@ impl Sphere {
 
     pub fn radius(&self) -> f32 {
         self.radius
+    }
+
+    // return value is temporary
+    pub fn trace(&self, ray: &Ray) -> RayHit {
+        let oc = *self.center() - *ray.origin();
+        let a = ray.dir().dot(ray.dir());
+        let b = -2.0 * ray.dir().dot(&oc);
+        let c = oc.dot(&oc) - self.radius().powi(2);
+        let discriminant = b * b - 4.0 * a * c;
+        if discriminant >= 0.0 {
+            let t = -(b + discriminant.sqrt()) / (2.0 * a);
+            let pos = *ray.origin() + *ray.dir() * t;
+            RayHit::new(t, (pos - *self.center()) / self.radius())
+        } else {
+            RayHit::NONE
+        }
     }
 }

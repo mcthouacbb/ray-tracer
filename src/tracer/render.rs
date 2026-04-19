@@ -1,7 +1,13 @@
 use image::{Rgb, RgbImage};
 use indicatif::ProgressBar;
 
-use crate::{math::Vec3, tracer::ray::Ray};
+use crate::{
+    math::Vec3,
+    tracer::{
+        ray::{Ray, trace_sphere},
+        sphere::Sphere,
+    },
+};
 
 pub fn scene_color(ray: &Ray) -> Vec3 {
     let a = 0.5 * ray.dir().y() + 0.5;
@@ -22,10 +28,15 @@ pub fn render_image(image: &mut RgbImage) {
             let u = (2.0 * x as f32 - width as f32 + 1.0) / width as f32;
             let v = -(2.0 * y as f32 - height as f32 + 1.0) / height as f32;
 
-            let ray_dir = Vec3::new(u / aspect_ratio, v, -1.0).normalized();
+            let ray_dir = Vec3::new(u * aspect_ratio, v, -1.0).normalized();
 
             let ray = Ray::new(CAMERA_POS, ray_dir);
-            let color = scene_color(&ray);
+            let hit = trace_sphere(&Sphere::new(Vec3::new(0.0, 0.0, -1.0), 0.5), &ray);
+            let color = if hit.is_some() {
+                Vec3::new(1.0, 0.0, 0.0)
+            } else {
+                scene_color(&ray)
+            };
 
             image.put_pixel(
                 x,

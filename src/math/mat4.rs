@@ -229,12 +229,12 @@ mod tests {
             assert_float_absolute_eq!(mat_a.index_raw(i), mat_b.index_raw(i));
         }
 
-        let vecA = mat * (mat2 * (mat3 * vec));
-        let vecB = mat_b * vec;
-        assert_float_absolute_eq!(vecA.x(), vecB.x());
-        assert_float_absolute_eq!(vecA.y(), vecB.y());
-        assert_float_absolute_eq!(vecA.z(), vecB.z());
-        assert_float_absolute_eq!(vecA.w(), vecB.w());
+        let vec_a = mat * (mat2 * (mat3 * vec));
+        let vec_b = mat_b * vec;
+        assert_float_absolute_eq!(vec_a.x(), vec_b.x());
+        assert_float_absolute_eq!(vec_a.y(), vec_b.y());
+        assert_float_absolute_eq!(vec_a.z(), vec_b.z());
+        assert_float_absolute_eq!(vec_a.w(), vec_b.w());
     }
 
     #[test]

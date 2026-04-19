@@ -53,7 +53,7 @@ impl Vec4 {
     }
 
     pub fn sqr_len(&self) -> f32 {
-        self.x() * self.x() + self.y() * self.y() + self.z() * self.z() + self.w() * self.w()
+        self.x().powi(2) + self.y().powi(2) + self.z().powi(2) + self.w().powi(2)
     }
 
     pub fn len(&self) -> f32 {
@@ -122,7 +122,7 @@ impl ops::Add<Vec4> for Vec4 {
 impl ops::SubAssign<Vec4> for Vec4 {
     fn sub_assign(&mut self, rhs: Self) {
         for i in 0..4 {
-            self.elems[i] += rhs.elems[i]
+            self.elems[i] -= rhs.elems[i]
         }
     }
 }
@@ -252,6 +252,7 @@ mod tests {
         assert_eq!(a.min(&b) + a.max(&b), a + b);
     }
 
+    #[test]
     fn test_add_sub() {
         let a = Vec4::new(28374.28, -575633.28347, 719383.91637, 22344.1552);
         let b = Vec4::new(18374.2871, 19439.2834, 8174.3838, -878734.51);
@@ -284,6 +285,7 @@ mod tests {
         assert_eq!(-(a - b), b - a);
     }
 
+    #[test]
     fn test_mul_div() {
         let a = Vec4::new(91738.3847, 76384.2847, -81827.22, 283847.11331);
         for i in -100..=100 {

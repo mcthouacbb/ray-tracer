@@ -41,7 +41,7 @@ impl Vec3 {
     }
 
     pub fn sqr_len(&self) -> f32 {
-        self.x() * self.x() + self.y() * self.y() + self.z() * self.z()
+        self.x().powi(2) + self.y().powi(2) + self.z().powi(2)
     }
 
     pub fn len(&self) -> f32 {
@@ -116,7 +116,7 @@ impl ops::Add<Vec3> for Vec3 {
 impl ops::SubAssign<Vec3> for Vec3 {
     fn sub_assign(&mut self, rhs: Self) {
         for i in 0..3 {
-            self.elems[i] += rhs.elems[i]
+            self.elems[i] -= rhs.elems[i]
         }
     }
 }
@@ -255,12 +255,13 @@ mod tests {
         assert_float_absolute_eq!(d.dot(&a), 0.0);
         assert_float_absolute_eq!(d.dot(&b), 0.0);
 
-        assert_float_absolute_eq!((d - c).sqr_len(), 0.0);
+        assert_float_absolute_eq!((d + c).sqr_len(), 0.0);
 
         assert_eq!(a.cross(&a), Vec3::ZERO);
         assert_eq!(b.cross(&b), Vec3::ZERO);
     }
 
+    #[test]
     fn test_add_sub() {
         let a = Vec3::new(28374.28, -575633.28347, 719383.91637);
         let b = Vec3::new(18374.2871, 19439.2834, 8174.3838);
@@ -288,6 +289,7 @@ mod tests {
         assert_eq!(-(a - b), b - a);
     }
 
+    #[test]
     fn test_mul_div() {
         let a = Vec3::new(91738.3847, 76384.2847, -81827.22);
         for i in -100..=100 {

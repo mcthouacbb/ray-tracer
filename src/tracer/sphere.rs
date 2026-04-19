@@ -1,5 +1,6 @@
 use crate::math::Vec3;
 
+#[derive(Debug, Clone, Copy)]
 pub struct Sphere {
     center: Vec3,
     radius: f32,

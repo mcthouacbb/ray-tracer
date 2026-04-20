@@ -104,8 +104,6 @@ impl Mat4 {
         let right = forward.cross(&*up).normalized();
         let up = right.cross(&forward);
 
-        println!("{:?}, {:?}, {:?}", forward, right, up);
-
         let mut result = Self::ZERO;
         result[0][0] = right[0];
         result[0][1] = right[1];

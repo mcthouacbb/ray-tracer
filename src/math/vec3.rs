@@ -112,6 +112,19 @@ impl Vec3 {
             }
         }
     }
+
+    pub fn random_unit_disk(rng: &mut impl RngExt) -> Self {
+        loop {
+            let v = Self::new(
+                rng.random_range(-1.0..=1.0),
+                rng.random_range(-1.0..=1.0),
+                0.0,
+            );
+            if v.sqr_len() <= 1.0 {
+                return v;
+            }
+        }
+    }
 }
 
 impl Index<usize> for Vec3 {

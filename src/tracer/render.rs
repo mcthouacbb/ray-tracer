@@ -67,7 +67,12 @@ pub fn render_image(image: &mut RgbImage, spp: u32, max_depth: u32) {
 
     let camera_mat = Mat4::look_at(&look_from, &look_at, &look_up);
 
-    let camera = Camera::new(aspect_ratio, f32::consts::PI / 8.0);
+    let camera = Camera::new(
+        aspect_ratio,
+        f32::consts::PI / 8.0,
+        3.4,
+        f32::consts::PI / 18.0,
+    );
 
     let progress_bar = ProgressBar::new((width * height) as u64);
 
@@ -122,10 +127,10 @@ pub fn render_image(image: &mut RgbImage, spp: u32, max_depth: u32) {
                 let u = (2.0 * (x as f32 + jitter_x) as f32 - width as f32 + 1.0) / width as f32;
                 let v = -(2.0 * (y as f32 + jitter_y) as f32 - height as f32 + 1.0) / height as f32;
 
-                let ray_dir = camera.get_ray_dir(u, v);
+                let camera_ray = camera.get_ray_dir(u, v, &mut rng);
                 let ray = Ray::new(
-                    camera_mat.transform_pos(&CAMERA_POS),
-                    camera_mat.transform_dir(&ray_dir),
+                    camera_mat.transform_pos(&camera_ray.origin()),
+                    camera_mat.transform_dir(&camera_ray.dir()),
                 );
 
                 let color = ray_color(&ray, &objects, &mut rng, max_depth);

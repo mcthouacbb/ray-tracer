@@ -62,8 +62,8 @@ pub fn render_image(image: &mut RgbImage, spp: u32, max_depth: u32) {
     let mut objects = Vec::<Box<dyn Hittable>>::new();
     let material_ground = Material::new_lambertian(Vec3::new(0.8, 0.8, 0.0));
     let material_center = Material::new_lambertian(Vec3::new(0.1, 0.2, 0.5));
-    let material_left = Material::new_metal(Vec3::new(0.8, 0.8, 0.8));
-    let material_right = Material::new_metal(Vec3::new(0.8, 0.6, 0.2));
+    let material_left = Material::new_metal(Vec3::new(0.8, 0.8, 0.8), 0.3);
+    let material_right = Material::new_metal(Vec3::new(0.8, 0.6, 0.2), 1.0);
 
     objects.push(Box::new(Sphere::new(
         Vec3::new(0.0, -100.5, -1.0),

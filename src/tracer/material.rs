@@ -55,19 +55,27 @@ impl Lambertian {
 #[derive(Debug, Clone, Copy)]
 pub struct Metal {
     albedo: Vec3,
+    fuzz: f32,
 }
 
 impl Metal {
-    fn new(albedo: Vec3) -> Self {
-        Self { albedo }
+    fn new(albedo: Vec3, fuzz: f32) -> Self {
+        assert!(0.0 <= fuzz && fuzz <= 1.0);
+        Self { albedo, fuzz }
     }
 
-    fn scatter(&self, ray: &Ray, ray_hit: &RayHit) -> Option<ScatterResult> {
-        let reflected_dir = ray.dir().reflect(&ray_hit.normal());
-        let reflected_origin = ray.origin() + ray.dir() * ray_hit.dist() + ray_hit.normal() * 1e-4;
-        let reflected_ray = Ray::new(reflected_origin, reflected_dir);
+    fn scatter(&self, ray: &Ray, ray_hit: &RayHit, rng: &mut impl RngExt) -> Option<ScatterResult> {
+        let reflected_dir = ray.dir().reflect(&ray_hit.normal()).normalized();
+        let scatter_dir = loop {
+            let scatter_dir = reflected_dir + self.fuzz * Vec3::random_unit(rng);
+            if scatter_dir.sqr_len() > 1e-8 {
+                break scatter_dir;
+            }
+        };
+        let scatter_origin = ray.origin() + ray.dir() * ray_hit.dist() + ray_hit.normal() * 1e-4;
+        let scattered_ray = Ray::new(scatter_origin, scatter_dir);
 
-        Some(ScatterResult::new(reflected_ray, self.albedo))
+        Some(ScatterResult::new(scattered_ray, self.albedo))
     }
 }
 
@@ -86,7 +94,7 @@ impl Material {
     ) -> Option<ScatterResult> {
         match self {
             Self::Lambertian(lambert) => lambert.scatter(ray, ray_hit, rng),
-            Self::Metal(metal) => metal.scatter(ray, ray_hit),
+            Self::Metal(metal) => metal.scatter(ray, ray_hit, rng),
         }
     }
 
@@ -94,7 +102,7 @@ impl Material {
         Self::Lambertian(Lambertian::new(albedo))
     }
 
-    pub fn new_metal(albedo: Vec3) -> Self {
-        Self::Metal(Metal::new(albedo))
+    pub fn new_metal(albedo: Vec3, fuzz: f32) -> Self {
+        Self::Metal(Metal::new(albedo, fuzz))
     }
 }

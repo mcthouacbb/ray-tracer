@@ -95,11 +95,6 @@ impl Vec3 {
             }
         }
     }
-
-    pub fn random_unit_hemisphere(dir: &Self, rng: &mut impl RngExt) -> Self {
-        let unit = Self::random_unit(rng);
-        if unit.dot(dir) < 0.0 { -unit } else { unit }
-    }
 }
 
 impl Index<usize> for Vec3 {

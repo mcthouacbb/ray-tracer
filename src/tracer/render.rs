@@ -31,9 +31,9 @@ pub fn ray_color(
         ray_hit.replace_if_closer(&object.trace(ray));
     }
     if ray_hit.dist() < f32::INFINITY {
-        let new_dir = Vec3::random_unit_hemisphere(&ray_hit.normal(), rng);
+        let new_dir = ray_hit.normal() + Vec3::random_unit(rng);
         let new_origin = ray.origin() + ray.dir() * ray_hit.dist() + 1e-4 * ray_hit.normal();
-        let new_ray = Ray::new(new_origin, new_dir);
+        let new_ray = Ray::new(new_origin, new_dir.normalized());
         return 0.5 * ray_color(&new_ray, objects, rng, depth - 1);
     } else {
         sky_color(&ray)

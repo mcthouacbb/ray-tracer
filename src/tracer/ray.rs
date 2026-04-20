@@ -22,28 +22,28 @@ impl Ray {
 
 #[derive(Debug, Clone, Copy)]
 pub struct RayHit {
-    t: f32,
+    dist: f32,
     normal: Vec3,
 }
 
 impl RayHit {
     pub const NONE: Self = Self {
-        t: f32::INFINITY,
+        dist: f32::INFINITY,
         normal: Vec3::ZERO,
     };
 
-    pub fn new(t: f32, normal: Vec3) -> Self {
-        Self { t, normal }
+    pub fn new(dist: f32, normal: Vec3) -> Self {
+        Self { dist, normal }
     }
 
     pub fn replace_if_closer(&mut self, hit: &Self) {
-        if hit.t < self.t {
+        if hit.dist < self.dist {
             *self = *hit;
         }
     }
 
-    pub fn t(&self) -> f32 {
-        self.t
+    pub fn dist(&self) -> f32 {
+        self.dist
     }
 
     pub fn normal(&self) -> Vec3 {

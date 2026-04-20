@@ -65,9 +65,9 @@ pub fn render_image(image: &mut RgbImage, spp: u32) {
                 x,
                 y,
                 Rgb([
-                    (pixel_color.x() * 255.0) as u8,
-                    (pixel_color.y() * 255.0) as u8,
-                    (pixel_color.z() * 255.0) as u8,
+                    (pixel_color.x() * 255.0 + 0.5) as u8,
+                    (pixel_color.y() * 255.0 + 0.5) as u8,
+                    (pixel_color.z() * 255.0 + 0.5) as u8,
                 ]),
             );
             progress_bar.inc(1);

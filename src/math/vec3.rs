@@ -89,7 +89,7 @@ impl Vec3 {
 
     pub fn refract(&self, n: &Self, refraction_ratio: f32) -> Self {
         let ortho = refraction_ratio * (*self - self.dot(n) * *n);
-        let parallel = -(1.0 - ortho.sqr_len()).abs().sqrt() * *n;
+        let parallel = -(1.0 - ortho.sqr_len()).max(0.0).sqrt() * *n;
         ortho + parallel
     }
 

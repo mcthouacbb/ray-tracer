@@ -89,6 +89,11 @@ impl Dielectric {
         Self { refractive_index }
     }
 
+    fn reflectance(cos: f32, refractive_index: f32) -> f32 {
+        let r0 = ((1.0 - refractive_index) / (1.0 + refractive_index)).powi(2);
+        r0 + (1.0 - r0) * (1.0 - cos).powi(5)
+    }
+
     fn scatter(&self, ray: &Ray, ray_hit: &RayHit, rng: &mut impl RngExt) -> Option<ScatterResult> {
         let refractive_index = if ray_hit.front_face() {
             1.0 / self.refractive_index
@@ -96,13 +101,21 @@ impl Dielectric {
             self.refractive_index
         };
 
-        let refracted_dir = ray
-            .dir()
-            .normalized()
-            .refract(&ray_hit.normal(), refractive_index);
-        let refracted_origin = ray.origin() + ray.dir() * ray_hit.dist();
+        let unit_dir = ray.dir().normalized();
 
-        let scattered_ray = Ray::new(refracted_origin + refracted_dir * 1e-4, refracted_dir);
+        let cos = -unit_dir.dot(&ray_hit.normal());
+        let sin = (1.0 - cos.powi(2)).max(0.0).sqrt();
+
+        let scatter_dir = if refractive_index * sin > 1.0
+            || Self::reflectance(cos, refractive_index) > rng.random_range(0.0..=1.0)
+        {
+            unit_dir.reflect(&ray_hit.normal())
+        } else {
+            unit_dir.refract(&ray_hit.normal(), refractive_index)
+        };
+        let scatter_origin = ray.origin() + ray.dir() * ray_hit.dist();
+
+        let scattered_ray = Ray::new(scatter_origin + scatter_dir * 1e-4, scatter_dir);
 
         Some(ScatterResult::new(scattered_ray, Vec3::new(1.0, 1.0, 1.0)))
     }

@@ -3,12 +3,28 @@ use indicatif::ProgressBar;
 
 use crate::{
     math::Vec3,
-    tracer::{hittable::Hittable, ray::Ray, sphere::Sphere},
+    tracer::{
+        hittable::Hittable,
+        ray::{Ray, RayHit},
+        sphere::Sphere,
+    },
 };
 
-pub fn scene_color(ray: &Ray) -> Vec3 {
+pub fn sky_color(ray: &Ray) -> Vec3 {
     let a = 0.5 * ray.dir().y() + 0.5;
     (1.0 - a) * Vec3::new(1.0, 1.0, 1.0) + a * Vec3::new(0.5, 0.7, 1.0)
+}
+
+pub fn ray_color(ray: &Ray, objects: &[Box<dyn Hittable>]) -> Vec3 {
+    let mut ray_hit = RayHit::NONE;
+    for object in objects {
+        ray_hit.replace_if_closer(&object.trace(ray));
+    }
+    if ray_hit.dist() < f32::INFINITY {
+        ray_hit.normal() * 0.5 + Vec3::from_value(0.5)
+    } else {
+        sky_color(&ray)
+    }
 }
 
 pub fn render_image(image: &mut RgbImage) {
@@ -17,6 +33,10 @@ pub fn render_image(image: &mut RgbImage) {
     let aspect_ratio = width as f32 / height as f32;
 
     let progress_bar = ProgressBar::new((width * height) as u64);
+
+    let mut objects = Vec::<Box<dyn Hittable>>::new();
+    objects.push(Box::new(Sphere::new(Vec3::new(0.0, 0.0, -1.0), 0.5)));
+    objects.push(Box::new(Sphere::new(Vec3::new(0.0, -100.5, -1.0), 100.0)));
 
     const CAMERA_POS: Vec3 = Vec3::ZERO;
 
@@ -28,12 +48,7 @@ pub fn render_image(image: &mut RgbImage) {
             let ray_dir = Vec3::new(u * aspect_ratio, v, -1.0).normalized();
 
             let ray = Ray::new(CAMERA_POS, ray_dir);
-            let hit = Sphere::new(Vec3::new(0.0, 0.0, -1.0), 0.5).trace(&ray);
-            let color = if hit.dist() < f32::INFINITY {
-                hit.normal() * 0.5 + Vec3::from_value(0.5)
-            } else {
-                scene_color(&ray)
-            };
+            let color = ray_color(&ray, &objects);
 
             image.put_pixel(
                 x,

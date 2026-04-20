@@ -3,8 +3,7 @@ mod tracer;
 
 use std::fs::File;
 
-use image::{ImageFormat, Rgb, RgbImage};
-use indicatif::ProgressBar;
+use image::{ImageFormat, RgbImage};
 
 use crate::tracer::render::render_image;
 

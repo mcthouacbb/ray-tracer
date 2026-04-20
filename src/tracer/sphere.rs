@@ -27,7 +27,7 @@ impl Sphere {
 }
 
 impl Hittable for Sphere {
-    fn hit_dist(&self, ray: &Ray) -> f32 {
+    fn trace(&self, ray: &Ray) -> RayHit {
         let oc = self.center() - ray.origin();
         let a = ray.dir().dot(&ray.dir());
         let b = -2.0 * ray.dir().dot(&oc);
@@ -37,21 +37,13 @@ impl Hittable for Sphere {
             let t1 = (-b - discriminant.sqrt()) / (2.0 * a);
             let t2 = (-b + discriminant.sqrt()) / (2.0 * a);
 
-            if t1 > 0.0 {
+            let dist = if t1 > 0.0 {
                 t1
             } else if t2 > 0.0 {
                 t2
             } else {
-                f32::INFINITY
-            }
-        } else {
-            f32::INFINITY
-        }
-    }
-
-    fn trace(&self, ray: &Ray) -> RayHit {
-        let dist = self.hit_dist(ray);
-        if dist >= 0.0 {
+                return RayHit::NONE;
+            };
             let pos = ray.origin() + ray.dir() * dist;
             RayHit::new(dist, (pos - self.center()) / self.radius())
         } else {

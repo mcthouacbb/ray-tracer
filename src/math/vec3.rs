@@ -1,5 +1,7 @@
 use std::ops::{self, Index, IndexMut};
 
+use rand::RngExt;
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Vec3 {
     elems: [f32; 3],
@@ -78,6 +80,25 @@ impl Vec3 {
             self.z() * b.x() - self.x() * b.z(),
             self.x() * b.y() - self.y() * b.x(),
         );
+    }
+
+    pub fn random_unit(rng: &mut impl RngExt) -> Self {
+        loop {
+            let v = Self::new(
+                rng.random_range(-1.0..=1.0),
+                rng.random_range(-1.0..=1.0),
+                rng.random_range(-1.0..=1.0),
+            );
+            let sqr_len = v.sqr_len();
+            if 1e-20 <= sqr_len && sqr_len <= 1.0 {
+                return v / sqr_len.sqrt();
+            }
+        }
+    }
+
+    pub fn random_unit_hemisphere(dir: &Self, rng: &mut impl RngExt) -> Self {
+        let unit = Self::random_unit(rng);
+        if unit.dot(dir) < 0.0 { -unit } else { unit }
     }
 }
 

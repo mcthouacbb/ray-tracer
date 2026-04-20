@@ -16,19 +16,31 @@ pub fn sky_color(ray: &Ray) -> Vec3 {
     (1.0 - a) * Vec3::new(1.0, 1.0, 1.0) + a * Vec3::new(0.5, 0.7, 1.0)
 }
 
-pub fn ray_color(ray: &Ray, objects: &[Box<dyn Hittable>]) -> Vec3 {
+pub fn ray_color(
+    ray: &Ray,
+    objects: &[Box<dyn Hittable>],
+    rng: &mut impl RngExt,
+    depth: u32,
+) -> Vec3 {
+    if depth == 0 {
+        return Vec3::ZERO;
+    }
+
     let mut ray_hit = RayHit::NONE;
     for object in objects {
         ray_hit.replace_if_closer(&object.trace(ray));
     }
     if ray_hit.dist() < f32::INFINITY {
-        ray_hit.normal() * 0.5 + Vec3::from_value(0.5)
+        let new_dir = Vec3::random_unit_hemisphere(&ray_hit.normal(), rng);
+        let new_origin = ray.origin() + ray.dir() * ray_hit.dist() + 1e-4 * ray_hit.normal();
+        let new_ray = Ray::new(new_origin, new_dir);
+        return 0.5 * ray_color(&new_ray, objects, rng, depth - 1);
     } else {
         sky_color(&ray)
     }
 }
 
-pub fn render_image(image: &mut RgbImage, spp: u32) {
+pub fn render_image(image: &mut RgbImage, spp: u32, max_depth: u32) {
     let width = image.width();
     let height = image.height();
     let aspect_ratio = width as f32 / height as f32;
@@ -56,7 +68,7 @@ pub fn render_image(image: &mut RgbImage, spp: u32) {
                 let ray_dir = Vec3::new(u * aspect_ratio, v, -1.0).normalized();
                 let ray = Ray::new(CAMERA_POS, ray_dir);
 
-                let color = ray_color(&ray, &objects);
+                let color = ray_color(&ray, &objects, &mut rng, max_depth);
                 accum_color += color;
             }
 

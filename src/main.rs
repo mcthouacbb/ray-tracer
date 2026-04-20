@@ -11,7 +11,7 @@ fn main() {
     const WIDTH: u32 = 800;
     const HEIGHT: u32 = 600;
     let mut image = RgbImage::new(WIDTH, HEIGHT);
-    render_image(&mut image, 100);
+    render_image(&mut image, 100, 10);
 
     let mut file = match File::create("render.png") {
         Ok(file) => file,

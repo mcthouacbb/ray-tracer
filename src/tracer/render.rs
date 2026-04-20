@@ -6,6 +6,7 @@ use crate::{
     math::Vec3,
     tracer::{
         hittable::Hittable,
+        material::Material,
         ray::{Ray, RayHit},
         sphere::Sphere,
     },
@@ -39,10 +40,13 @@ pub fn ray_color(
         ray_hit.replace_if_closer(&object.trace(ray));
     }
     if ray_hit.dist() < f32::INFINITY {
-        let new_dir = ray_hit.normal() + Vec3::random_unit(rng);
-        let new_origin = ray.origin() + ray.dir() * ray_hit.dist() + 1e-4 * ray_hit.normal();
-        let new_ray = Ray::new(new_origin, new_dir.normalized());
-        return 0.5 * ray_color(&new_ray, objects, rng, depth - 1);
+        match ray_hit.material().scatter(&ray, &ray_hit, rng) {
+            Some(scatter_result) => {
+                let sub_color = ray_color(scatter_result.scattered_ray(), objects, rng, depth - 1);
+                scatter_result.attenuation().pairwise(&sub_color)
+            }
+            None => Vec3::new(0.0, 0.0, 0.0),
+        }
     } else {
         sky_color(&ray)
     }
@@ -56,8 +60,34 @@ pub fn render_image(image: &mut RgbImage, spp: u32, max_depth: u32) {
     let progress_bar = ProgressBar::new((width * height) as u64);
 
     let mut objects = Vec::<Box<dyn Hittable>>::new();
-    objects.push(Box::new(Sphere::new(Vec3::new(0.0, 0.0, -1.0), 0.5)));
-    objects.push(Box::new(Sphere::new(Vec3::new(0.0, -100.5, -1.0), 100.0)));
+    let material_ground = Material::new_lambertian(Vec3::new(0.8, 0.8, 0.0));
+    let material_center = Material::new_lambertian(Vec3::new(0.1, 0.2, 0.5));
+    let material_left = Material::new_metal(Vec3::new(0.8, 0.8, 0.8));
+    let material_right = Material::new_metal(Vec3::new(0.8, 0.6, 0.2));
+
+    objects.push(Box::new(Sphere::new(
+        Vec3::new(0.0, -100.5, -1.0),
+        100.0,
+        &material_ground,
+    )));
+
+    objects.push(Box::new(Sphere::new(
+        Vec3::new(0.0, 0.0, -1.2),
+        0.5,
+        &material_center,
+    )));
+
+    objects.push(Box::new(Sphere::new(
+        Vec3::new(-1.0, 0.0, -1.2),
+        0.5,
+        &material_left,
+    )));
+
+    objects.push(Box::new(Sphere::new(
+        Vec3::new(1.0, 0.0, -1.2),
+        0.5,
+        &material_right,
+    )));
 
     const CAMERA_POS: Vec3 = Vec3::ZERO;
 

@@ -74,12 +74,24 @@ impl Vec3 {
         self.x() * b.x() + self.y() * b.y() + self.z() * b.z()
     }
 
-    pub fn cross(&self, b: &Self) -> Vec3 {
+    pub fn cross(&self, b: &Self) -> Self {
         return Vec3::new(
             self.y() * b.z() - self.z() * b.y(),
             self.z() * b.x() - self.x() * b.z(),
             self.x() * b.y() - self.y() * b.x(),
         );
+    }
+
+    pub fn reflect(&self, n: &Self) -> Self {
+        return *self - 2.0 * self.dot(n) * *n;
+    }
+
+    pub fn pairwise(&self, other: &Self) -> Self {
+        Vec3::new(
+            self.x() * other.x(),
+            self.y() * other.y(),
+            self.z() * other.z(),
+        )
     }
 
     pub fn random_unit(rng: &mut impl RngExt) -> Self {

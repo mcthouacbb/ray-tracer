@@ -2,6 +2,7 @@ use crate::{
     math::Vec3,
     tracer::{
         hittable::Hittable,
+        material::Material,
         ray::{Ray, RayHit},
     },
 };
@@ -10,11 +11,16 @@ use crate::{
 pub struct Sphere {
     center: Vec3,
     radius: f32,
+    material: Material,
 }
 
 impl Sphere {
-    pub fn new(center: Vec3, radius: f32) -> Self {
-        Self { center, radius }
+    pub fn new(center: Vec3, radius: f32, material: &Material) -> Self {
+        Self {
+            center,
+            radius,
+            material: *material,
+        }
     }
 
     pub fn center(&self) -> Vec3 {
@@ -45,7 +51,7 @@ impl Hittable for Sphere {
                 return RayHit::NONE;
             };
             let pos = ray.origin() + ray.dir() * dist;
-            RayHit::new(dist, (pos - self.center()) / self.radius())
+            RayHit::new(dist, (pos - self.center()) / self.radius(), self.material)
         } else {
             RayHit::NONE
         }

@@ -24,6 +24,7 @@ impl Ray {
 pub struct RayHit {
     dist: f32,
     normal: Vec3,
+    front_face: bool,
     // TODO: could be a MaybeUninit?
     material: Option<Material>,
 }
@@ -32,6 +33,7 @@ impl RayHit {
     pub const NONE: Self = Self {
         dist: f32::INFINITY,
         normal: Vec3::ZERO,
+        front_face: false,
         material: None,
     };
 
@@ -41,6 +43,7 @@ impl RayHit {
         Self {
             dist,
             normal,
+            front_face: false,
             material: Some(material),
         }
     }
@@ -51,6 +54,19 @@ impl RayHit {
         }
     }
 
+    pub fn finalize(&mut self, ray: &Ray) {
+        if self.dist == f32::INFINITY {
+            return;
+        }
+
+        if ray.dir().dot(&self.normal) > 0.0 {
+            self.normal = -self.normal;
+            self.front_face = false
+        } else {
+            self.front_face = true
+        }
+    }
+
     pub fn dist(&self) -> f32 {
         self.dist
     }
@@ -58,6 +74,11 @@ impl RayHit {
     pub fn normal(&self) -> Vec3 {
         assert!(self.dist < f32::INFINITY);
         self.normal
+    }
+
+    pub fn front_face(&self) -> bool {
+        assert!(self.dist < f32::INFINITY);
+        self.front_face
     }
 
     pub fn material(&self) -> Material {

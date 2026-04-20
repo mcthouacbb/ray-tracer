@@ -99,6 +99,33 @@ impl Mat4 {
         result
     }
 
+    pub fn look_at(from: &Vec3, to: &Vec3, up: &Vec3) -> Self {
+        let forward = (*to - *from).normalized();
+        let right = forward.cross(&*up).normalized();
+        let up = right.cross(&forward);
+
+        println!("{:?}, {:?}, {:?}", forward, right, up);
+
+        let mut result = Self::ZERO;
+        result[0][0] = right[0];
+        result[0][1] = right[1];
+        result[0][2] = right[2];
+
+        result[1][0] = up[0];
+        result[1][1] = up[1];
+        result[1][2] = up[2];
+
+        result[2][0] = -forward[0];
+        result[2][1] = -forward[1];
+        result[2][2] = -forward[2];
+
+        result[3][0] = from[0];
+        result[3][1] = from[1];
+        result[3][2] = from[2];
+
+        result
+    }
+
     pub fn mul_vec(&self, vec: &Vec4) -> Vec4 {
         let rows = self.rows();
         Vec4::new(
@@ -107,6 +134,18 @@ impl Mat4 {
             rows[2].dot(&vec),
             rows[3].dot(&vec),
         )
+    }
+
+    pub fn transform_pos(&self, pos: &Vec3) -> Vec3 {
+        let homogenous = Vec4::new(pos.x(), pos.y(), pos.z(), 1.0);
+        let result = self.mul_vec(&homogenous);
+        Vec3::new(result.x(), result.y(), result.z())
+    }
+
+    pub fn transform_dir(&self, dir: &Vec3) -> Vec3 {
+        let homogenous = Vec4::new(dir.x(), dir.y(), dir.z(), 0.0);
+        let result = self.mul_vec(&homogenous);
+        Vec3::new(result.x(), result.y(), result.z())
     }
 
     pub fn mul_mat(&self, mat: &Self) -> Self {

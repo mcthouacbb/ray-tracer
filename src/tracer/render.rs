@@ -1,10 +1,13 @@
+use std::f32;
+
 use image::{Rgb, RgbImage};
 use indicatif::ProgressBar;
 use rand::{RngExt, SeedableRng, rngs::Xoshiro256PlusPlus};
 
 use crate::{
-    math::Vec3,
+    math::{Mat4, Vec3},
     tracer::{
+        camera::Camera,
         hittable::Hittable,
         material::Material,
         ray::{Ray, RayHit},
@@ -57,6 +60,14 @@ pub fn render_image(image: &mut RgbImage, spp: u32, max_depth: u32) {
     let width = image.width();
     let height = image.height();
     let aspect_ratio = width as f32 / height as f32;
+
+    let look_from = Vec3::new(-2.0, 2.0, 1.0);
+    let look_at = Vec3::new(0.0, 0.0, -1.0);
+    let look_up = Vec3::new(0.0, 1.0, 0.0);
+
+    let camera_mat = Mat4::look_at(&look_from, &look_at, &look_up);
+
+    let camera = Camera::new(aspect_ratio, f32::consts::PI / 8.0);
 
     let progress_bar = ProgressBar::new((width * height) as u64);
 
@@ -111,8 +122,11 @@ pub fn render_image(image: &mut RgbImage, spp: u32, max_depth: u32) {
                 let u = (2.0 * (x as f32 + jitter_x) as f32 - width as f32 + 1.0) / width as f32;
                 let v = -(2.0 * (y as f32 + jitter_y) as f32 - height as f32 + 1.0) / height as f32;
 
-                let ray_dir = Vec3::new(u * aspect_ratio, v, -1.0).normalized();
-                let ray = Ray::new(CAMERA_POS, ray_dir);
+                let ray_dir = camera.get_ray_dir(u, v);
+                let ray = Ray::new(
+                    camera_mat.transform_pos(&CAMERA_POS),
+                    camera_mat.transform_dir(&ray_dir),
+                );
 
                 let color = ray_color(&ray, &objects, &mut rng, max_depth);
                 accum_color += color;

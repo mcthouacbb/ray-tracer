@@ -16,6 +16,14 @@ pub fn sky_color(ray: &Ray) -> Vec3 {
     (1.0 - a) * Vec3::new(1.0, 1.0, 1.0) + a * Vec3::new(0.5, 0.7, 1.0)
 }
 
+pub fn linear_to_srgb(linear: f32) -> f32 {
+    if linear < 0.0031308 {
+        linear * 12.92
+    } else {
+        1.055 * linear.powf(0.41666) - 0.055
+    }
+}
+
 pub fn ray_color(
     ray: &Ray,
     objects: &[Box<dyn Hittable>],
@@ -77,9 +85,9 @@ pub fn render_image(image: &mut RgbImage, spp: u32, max_depth: u32) {
                 x,
                 y,
                 Rgb([
-                    (pixel_color.x() * 255.0 + 0.5) as u8,
-                    (pixel_color.y() * 255.0 + 0.5) as u8,
-                    (pixel_color.z() * 255.0 + 0.5) as u8,
+                    (linear_to_srgb(pixel_color.x()) * 255.0 + 0.5) as u8,
+                    (linear_to_srgb(pixel_color.y()) * 255.0 + 0.5) as u8,
+                    (linear_to_srgb(pixel_color.z()) * 255.0 + 0.5) as u8,
                 ]),
             );
             progress_bar.inc(1);

@@ -1,7 +1,5 @@
-use std::ops::{self, Index, IndexMut};
-
-use assert_float_eq::assert_float_absolute_eq;
 use rand::RngExt;
+use std::ops::{self, Index, IndexMut};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Vec3 {

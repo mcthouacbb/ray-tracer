@@ -1,5 +1,5 @@
 use rand::RngExt;
-use std::ops::{self, Index, IndexMut};
+use std::ops::{self, Index, IndexMut, RangeBounds, RangeInclusive};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Vec3 {
@@ -96,6 +96,14 @@ impl Vec3 {
             self.x() * other.x(),
             self.y() * other.y(),
             self.z() * other.z(),
+        )
+    }
+
+    pub fn random_range(min: f32, max: f32, rng: &mut impl RngExt) -> Self {
+        Self::new(
+            rng.random_range(min..=max),
+            rng.random_range(min..=max),
+            rng.random_range(min..=max),
         )
     }
 

@@ -61,61 +61,74 @@ pub fn render_image(image: &mut RgbImage, spp: u32, max_depth: u32) {
     let height = image.height();
     let aspect_ratio = width as f32 / height as f32;
 
-    let look_from = Vec3::new(-2.0, 2.0, 1.0);
-    let look_at = Vec3::new(0.0, 0.0, -1.0);
+    let look_from = Vec3::new(13.0, 2.0, 3.0);
+    let look_at = Vec3::new(0.0, 0.0, 0.0);
     let look_up = Vec3::new(0.0, 1.0, 0.0);
 
     let camera_mat = Mat4::look_at(&look_from, &look_at, &look_up);
 
     let camera = Camera::new(
         aspect_ratio,
-        f32::consts::PI / 8.0,
-        3.4,
-        f32::consts::PI / 18.0,
+        20.0f32.to_radians(),
+        10.0,
+        0.6f32.to_radians(),
     );
 
     let progress_bar = ProgressBar::new((width * height) as u64);
 
     let mut objects = Vec::<Box<dyn Hittable>>::new();
-    let material_ground = Material::new_lambertian(Vec3::new(0.8, 0.8, 0.0));
-    let material_center = Material::new_lambertian(Vec3::new(0.1, 0.2, 0.5));
-    let material_left = Material::new_dielectric(1.5);
-    let material_bubble = Material::new_dielectric(0.66666);
-    let material_right = Material::new_metal(Vec3::new(0.8, 0.6, 0.2), 1.0);
-
+    let ground_material = Material::new_lambertian(Vec3::new(0.5, 0.5, 0.5));
     objects.push(Box::new(Sphere::new(
-        Vec3::new(0.0, -100.5, -1.0),
-        100.0,
-        &material_ground,
+        Vec3::new(0.0, -1000.0, 0.0),
+        1000.0,
+        &ground_material,
     )));
-
-    objects.push(Box::new(Sphere::new(
-        Vec3::new(0.0, 0.0, -1.2),
-        0.5,
-        &material_center,
-    )));
-
-    objects.push(Box::new(Sphere::new(
-        Vec3::new(-1.0, 0.0, -1.0),
-        0.5,
-        &material_left,
-    )));
-
-    objects.push(Box::new(Sphere::new(
-        Vec3::new(-1.0, 0.0, -1.0),
-        0.4,
-        &material_bubble,
-    )));
-
-    objects.push(Box::new(Sphere::new(
-        Vec3::new(1.0, 0.0, -1.0),
-        0.5,
-        &material_right,
-    )));
-
-    const CAMERA_POS: Vec3 = Vec3::ZERO;
 
     let mut rng = Xoshiro256PlusPlus::from_rng(&mut rand::rng());
+
+    for a in -11..11 {
+        for b in -11..11 {
+            let center = Vec3::new(
+                a as f32 + rng.random_range(0.0..0.9),
+                0.2,
+                b as f32 + rng.random_range(0.0..0.9),
+            );
+
+            if (center - Vec3::new(4.0, 0.2, 0.0)).len() > 0.9 {
+                let choose_mat = rng.random_range(0.0..1.0);
+                if choose_mat < 0.8 {
+                    let albedo = Vec3::random_range(0.0, 1.0, &mut rng)
+                        .pairwise(&Vec3::random_range(0.0, 1.0, &mut rng));
+                    let lambertian = Material::new_lambertian(albedo);
+                    objects.push(Box::new(Sphere::new(center, 0.2, &lambertian)));
+                } else if choose_mat < 0.95 {
+                    let albedo = Vec3::random_range(0.5, 1.0, &mut rng);
+                    let fuzz = rng.random_range(0.0..=0.5);
+                    let metal = Material::new_metal(albedo, fuzz);
+                    objects.push(Box::new(Sphere::new(center, 0.2, &metal)));
+                } else {
+                    let dielectric = Material::new_dielectric(1.5);
+                    objects.push(Box::new(Sphere::new(center, 0.2, &dielectric)));
+                }
+            }
+        }
+    }
+
+    objects.push(Box::new(Sphere::new(
+        Vec3::new(0.0, 1.0, 0.0),
+        1.0,
+        &Material::new_dielectric(1.5),
+    )));
+    objects.push(Box::new(Sphere::new(
+        Vec3::new(-4.0, 1.0, 0.0),
+        1.0,
+        &Material::new_lambertian(Vec3::new(0.4, 0.2, 0.1)),
+    )));
+    objects.push(Box::new(Sphere::new(
+        Vec3::new(4.0, 1.0, 0.0),
+        1.0,
+        &Material::new_metal(Vec3::new(0.7, 0.6, 0.5), 0.0),
+    )));
 
     for y in 0..height {
         for x in 0..width {

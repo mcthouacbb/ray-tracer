@@ -1,5 +1,6 @@
 use std::ops::{self, Index, IndexMut};
 
+use assert_float_eq::assert_float_absolute_eq;
 use rand::RngExt;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -84,6 +85,12 @@ impl Vec3 {
 
     pub fn reflect(&self, n: &Self) -> Self {
         return *self - 2.0 * self.dot(n) * *n;
+    }
+
+    pub fn refract(&self, n: &Self, refraction_ratio: f32) -> Self {
+        let ortho = refraction_ratio * (*self - self.dot(n) * *n);
+        let parallel = -(1.0 - ortho.sqr_len()).max(0.0).sqrt() * *n;
+        ortho + parallel
     }
 
     pub fn pairwise(&self, other: &Self) -> Self {

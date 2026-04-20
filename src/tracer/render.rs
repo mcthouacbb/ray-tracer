@@ -39,6 +39,7 @@ pub fn ray_color(
     for object in objects {
         ray_hit.replace_if_closer(&object.trace(ray));
     }
+    ray_hit.finalize(&ray);
     if ray_hit.dist() < f32::INFINITY {
         match ray_hit.material().scatter(&ray, &ray_hit, rng) {
             Some(scatter_result) => {
@@ -62,7 +63,8 @@ pub fn render_image(image: &mut RgbImage, spp: u32, max_depth: u32) {
     let mut objects = Vec::<Box<dyn Hittable>>::new();
     let material_ground = Material::new_lambertian(Vec3::new(0.8, 0.8, 0.0));
     let material_center = Material::new_lambertian(Vec3::new(0.1, 0.2, 0.5));
-    let material_left = Material::new_metal(Vec3::new(0.8, 0.8, 0.8), 0.3);
+    let material_left = Material::new_dielectric(1.5);
+    let material_bubble = Material::new_dielectric(0.66666);
     let material_right = Material::new_metal(Vec3::new(0.8, 0.6, 0.2), 1.0);
 
     objects.push(Box::new(Sphere::new(
@@ -78,13 +80,19 @@ pub fn render_image(image: &mut RgbImage, spp: u32, max_depth: u32) {
     )));
 
     objects.push(Box::new(Sphere::new(
-        Vec3::new(-1.0, 0.0, -1.2),
+        Vec3::new(-1.0, 0.0, -1.0),
         0.5,
         &material_left,
     )));
 
     objects.push(Box::new(Sphere::new(
-        Vec3::new(1.0, 0.0, -1.2),
+        Vec3::new(-1.0, 0.0, -1.0),
+        0.4,
+        &material_bubble,
+    )));
+
+    objects.push(Box::new(Sphere::new(
+        Vec3::new(1.0, 0.0, -1.0),
         0.5,
         &material_right,
     )));

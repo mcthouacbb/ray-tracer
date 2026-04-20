@@ -39,14 +39,14 @@ impl Lambertian {
     }
 
     fn scatter(&self, ray: &Ray, ray_hit: &RayHit, rng: &mut impl RngExt) -> Option<ScatterResult> {
-        let scatter_direction: Vec3 = loop {
-            let scatter_direction = ray_hit.normal() + Vec3::random_unit(rng);
-            if scatter_direction.sqr_len() > 1e-8 {
-                break scatter_direction;
+        let scatter_dir: Vec3 = loop {
+            let scatter_dir = ray_hit.normal() + Vec3::random_unit(rng);
+            if scatter_dir.sqr_len() > 1e-8 {
+                break scatter_dir;
             }
         };
-        let scatter_origin = ray.origin() + ray.dir() * ray_hit.dist() + ray_hit.normal() * 1e-4;
-        let scattered_ray = Ray::new(scatter_origin, scatter_direction);
+        let scatter_origin = ray.origin() + ray.dir() * ray_hit.dist();
+        let scattered_ray = Ray::new(scatter_origin + scatter_dir * 1e-4, scatter_dir);
 
         Some(ScatterResult::new(scattered_ray, self.albedo))
     }
@@ -72,10 +72,52 @@ impl Metal {
                 break scatter_dir;
             }
         };
-        let scatter_origin = ray.origin() + ray.dir() * ray_hit.dist() + ray_hit.normal() * 1e-4;
-        let scattered_ray = Ray::new(scatter_origin, scatter_dir);
+        let scatter_origin = ray.origin() + ray.dir() * ray_hit.dist();
+        let scattered_ray = Ray::new(scatter_origin + scatter_dir * 1e-4, scatter_dir);
 
         Some(ScatterResult::new(scattered_ray, self.albedo))
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct Dielectric {
+    refractive_index: f32,
+}
+
+impl Dielectric {
+    fn new(refractive_index: f32) -> Self {
+        Self { refractive_index }
+    }
+
+    fn reflectance(cos: f32, refractive_index: f32) -> f32 {
+        let r0 = ((1.0 - refractive_index) / (1.0 + refractive_index)).powi(2);
+        r0 + (1.0 - r0) * (1.0 - cos).powi(5)
+    }
+
+    fn scatter(&self, ray: &Ray, ray_hit: &RayHit, rng: &mut impl RngExt) -> Option<ScatterResult> {
+        let refractive_index = if ray_hit.front_face() {
+            1.0 / self.refractive_index
+        } else {
+            self.refractive_index
+        };
+
+        let unit_dir = ray.dir().normalized();
+
+        let cos = -unit_dir.dot(&ray_hit.normal());
+        let sin = (1.0 - cos.powi(2)).max(0.0).sqrt();
+
+        let scatter_dir = if refractive_index * sin > 1.0
+            || Self::reflectance(cos, refractive_index) > rng.random_range(0.0..=1.0)
+        {
+            unit_dir.reflect(&ray_hit.normal())
+        } else {
+            unit_dir.refract(&ray_hit.normal(), refractive_index)
+        };
+        let scatter_origin = ray.origin() + ray.dir() * ray_hit.dist();
+
+        let scattered_ray = Ray::new(scatter_origin + scatter_dir * 1e-4, scatter_dir);
+
+        Some(ScatterResult::new(scattered_ray, Vec3::new(1.0, 1.0, 1.0)))
     }
 }
 
@@ -83,6 +125,7 @@ impl Metal {
 pub enum Material {
     Lambertian(Lambertian),
     Metal(Metal),
+    Dielectric(Dielectric),
 }
 
 impl Material {
@@ -95,6 +138,7 @@ impl Material {
         match self {
             Self::Lambertian(lambert) => lambert.scatter(ray, ray_hit, rng),
             Self::Metal(metal) => metal.scatter(ray, ray_hit, rng),
+            Self::Dielectric(dielectric) => dielectric.scatter(ray, ray_hit, rng),
         }
     }
 
@@ -104,5 +148,9 @@ impl Material {
 
     pub fn new_metal(albedo: Vec3, fuzz: f32) -> Self {
         Self::Metal(Metal::new(albedo, fuzz))
+    }
+
+    pub fn new_dielectric(refractive_index: f32) -> Self {
+        Self::Dielectric(Dielectric::new(refractive_index))
     }
 }

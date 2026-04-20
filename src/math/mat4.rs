@@ -50,7 +50,7 @@ impl Mat4 {
         Self::from_cols(self.rows())
     }
 
-    pub fn translate(t: Vec3) -> Self {
+    pub fn translate(t: &Vec3) -> Self {
         let mut result = Self::IDENTITY;
         result[3][0] = t[0];
         result[3][1] = t[1];
@@ -91,7 +91,7 @@ impl Mat4 {
         result
     }
 
-    pub fn scale(s: Vec3) -> Self {
+    pub fn scale(s: &Vec3) -> Self {
         let mut result = Self::IDENTITY;
         result[0][0] = s[0];
         result[1][1] = s[1];
@@ -99,7 +99,7 @@ impl Mat4 {
         result
     }
 
-    pub fn mul_vec(&self, vec: Vec4) -> Vec4 {
+    pub fn mul_vec(&self, vec: &Vec4) -> Vec4 {
         let rows = self.rows();
         Vec4::new(
             rows[0].dot(&vec),
@@ -109,12 +109,12 @@ impl Mat4 {
         )
     }
 
-    pub fn mul_mat(&self, mat: Self) -> Self {
+    pub fn mul_mat(&self, mat: &Self) -> Self {
         Self::from_cols([
-            self.mul_vec(mat[0]),
-            self.mul_vec(mat[1]),
-            self.mul_vec(mat[2]),
-            self.mul_vec(mat[3]),
+            self.mul_vec(&mat[0]),
+            self.mul_vec(&mat[1]),
+            self.mul_vec(&mat[2]),
+            self.mul_vec(&mat[3]),
         ])
     }
 }
@@ -136,7 +136,7 @@ impl Mul<Vec4> for Mat4 {
     type Output = Vec4;
 
     fn mul(self, rhs: Vec4) -> Self::Output {
-        self.mul_vec(rhs)
+        self.mul_vec(&rhs)
     }
 }
 
@@ -144,7 +144,7 @@ impl Mul<Mat4> for Mat4 {
     type Output = Self;
 
     fn mul(self, rhs: Self) -> Self::Output {
-        self.mul_mat(rhs)
+        self.mul_mat(&rhs)
     }
 }
 
@@ -196,14 +196,14 @@ mod tests {
         let vec = Vec4::new(rand[0], rand[1], rand[2], rand[3]);
 
         assert_eq!(vec, Mat4::IDENTITY * vec);
-        assert_eq!(vec, Mat4::IDENTITY.mul_vec(vec));
+        assert_eq!(vec, Mat4::IDENTITY.mul_vec(&vec));
 
-        assert_eq!(Mat4::IDENTITY, Mat4::IDENTITY.mul_mat(Mat4::IDENTITY));
+        assert_eq!(Mat4::IDENTITY, Mat4::IDENTITY.mul_mat(&Mat4::IDENTITY));
 
         let mut mat = Mat4::IDENTITY;
         mat[2][2] = 0.0;
 
-        assert_eq!(Vec4::new(rand[0], rand[1], 0.0, rand[3]), mat.mul_vec(vec));
+        assert_eq!(Vec4::new(rand[0], rand[1], 0.0, rand[3]), mat.mul_vec(&vec));
 
         mat[0][1] = 2.5;
         mat[1][0] = 0.8;
@@ -215,7 +215,7 @@ mod tests {
                 0.0,
                 rand[3] * 4.3
             ),
-            mat.mul_vec(vec)
+            mat.mul_vec(&vec)
         );
 
         let rand = gen_rand(&mut rng, 48);
@@ -284,8 +284,8 @@ mod tests {
         let rand = gen_rand(&mut rng, 9);
         let mut vec = Vec4::new(rand[0], rand[1], rand[2], 1.0);
 
-        let mat1 = Mat4::translate(Vec3::new(rand[3], rand[4], rand[5]));
-        let mat2 = Mat4::translate(Vec3::new(rand[6], rand[7], rand[8]));
+        let mat1 = Mat4::translate(&Vec3::new(rand[3], rand[4], rand[5]));
+        let mat2 = Mat4::translate(&Vec3::new(rand[6], rand[7], rand[8]));
 
         let result = mat1 * vec;
         assert_float_absolute_eq!(result.x(), rand[0] + rand[3]);

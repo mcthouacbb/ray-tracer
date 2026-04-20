@@ -1,5 +1,6 @@
-use crate::{math::Vec3, tracer::sphere::Sphere};
+use crate::math::Vec3;
 
+#[derive(Debug, Clone, Copy)]
 pub struct Ray {
     origin: Vec3,
     dir: Vec3,
@@ -10,24 +11,42 @@ impl Ray {
         Self { origin, dir }
     }
 
-    pub fn origin(&self) -> &Vec3 {
-        &self.origin
+    pub fn origin(&self) -> Vec3 {
+        self.origin
     }
 
-    pub fn dir(&self) -> &Vec3 {
-        &self.dir
+    pub fn dir(&self) -> Vec3 {
+        self.dir
     }
 }
 
-// return value is temporary
-pub fn trace_sphere(sphere: &Sphere, ray: &Ray) -> Option<()> {
-    let oc = *sphere.center() - *ray.origin();
-    let a = ray.dir().dot(ray.dir());
-    let b = -2.0 * ray.dir().dot(&oc);
-    let c = oc.dot(&oc) - sphere.radius().powi(2);
-    if b * b - 4.0 * a * c >= 0.0 {
-        Some(())
-    } else {
-        None
+#[derive(Debug, Clone, Copy)]
+pub struct RayHit {
+    dist: f32,
+    normal: Vec3,
+}
+
+impl RayHit {
+    pub const NONE: Self = Self {
+        dist: f32::INFINITY,
+        normal: Vec3::ZERO,
+    };
+
+    pub fn new(dist: f32, normal: Vec3) -> Self {
+        Self { dist, normal }
+    }
+
+    pub fn replace_if_closer(&mut self, hit: &Self) {
+        if hit.dist < self.dist {
+            *self = *hit;
+        }
+    }
+
+    pub fn dist(&self) -> f32 {
+        self.dist
+    }
+
+    pub fn normal(&self) -> Vec3 {
+        self.normal
     }
 }

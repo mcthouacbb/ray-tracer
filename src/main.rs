@@ -18,6 +18,7 @@ fn main() {
     const WIDTH: u32 = 1200;
     const HEIGHT: u32 = 500;
     const SPP: u32 = 500;
+    const THREADS: u32 = 8;
 
     let look_from = Vec3::new(13.0, 2.0, 3.0);
     let look_at = Vec3::new(0.0, 0.0, 0.0);
@@ -87,7 +88,7 @@ fn main() {
     )));
 
     let mut image = RgbImage::new(WIDTH, HEIGHT);
-    render_image(&mut image, &camera, &camera_mat, &objects, SPP, 25);
+    render_image(&mut image, &camera, &camera_mat, &objects, SPP, 25, THREADS);
 
     let mut file = match File::create("render.png") {
         Ok(file) => file,

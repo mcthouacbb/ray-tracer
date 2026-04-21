@@ -11,6 +11,7 @@ use rand::{RngExt, SeedableRng, rngs::Xoshiro256PlusPlus};
 use crate::{
     math::{Mat4, Vec3},
     tracer::{
+        bvh::blas::BLAS,
         camera::Camera,
         hittable::Hittable,
         ray::{Ray, RayHit},
@@ -32,6 +33,7 @@ pub fn linear_to_srgb(linear: f32) -> f32 {
 
 pub fn ray_color(
     ray: &Ray,
+    bvh: &BLAS,
     objects: &[Box<dyn Hittable>],
     rng: &mut impl RngExt,
     depth: u32,
@@ -41,14 +43,17 @@ pub fn ray_color(
     }
 
     let mut ray_hit = RayHit::NONE;
-    for object in objects {
-        ray_hit.replace_if_closer(&object.trace(ray));
-    }
+    // for object in objects {
+    // ray_hit.replace_if_closer(&object.trace(ray));
+    // }
+    bvh.traverse(ray, &mut ray_hit, objects);
+
     ray_hit.finalize(&ray);
     if ray_hit.dist() < f32::INFINITY {
         match ray_hit.material().scatter(&ray, &ray_hit, rng) {
             Some(scatter_result) => {
-                let sub_color = ray_color(scatter_result.scattered_ray(), objects, rng, depth - 1);
+                let sub_color =
+                    ray_color(scatter_result.scattered_ray(), bvh, objects, rng, depth - 1);
                 scatter_result.attenuation().pairwise(&sub_color)
             }
             None => Vec3::new(0.0, 0.0, 0.0),
@@ -70,6 +75,8 @@ pub fn render_image(
     let width = image.width();
     let height = image.height();
     assert!(width % 4 == 0 && height % 4 == 0);
+
+    let bvh = BLAS::create(objects);
 
     let progress_bar = ProgressBar::new((width * height) as u64);
 
@@ -113,7 +120,7 @@ pub fn render_image(
                                     camera_mat.transform_dir(&camera_ray.dir()),
                                 );
 
-                                let color = ray_color(&ray, &objects, &mut rng, max_depth);
+                                let color = ray_color(&ray, &bvh, objects, &mut rng, max_depth);
                                 accum_color += color;
                             }
 

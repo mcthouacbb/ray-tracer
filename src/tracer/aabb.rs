@@ -26,6 +26,20 @@ impl AABB {
         self.min
     }
 
+    pub fn extent(&self) -> Vec3 {
+        self.max - self.min
+    }
+
+    pub fn surface_area(&self) -> f32 {
+        let extent = self.extent();
+        2.0 * (extent.x() * extent.y() + extent.y() * extent.z() + extent.z() * extent.x())
+    }
+
+    pub fn expand(&mut self, other: &Self) {
+        self.min = self.min.min(&other.min);
+        self.max = self.max.max(&other.max);
+    }
+
     pub fn hit(&self, ray: &Ray) -> f32 {
         let mut tmin = 0.0;
         let mut tmax = f32::INFINITY;

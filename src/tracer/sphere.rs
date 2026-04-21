@@ -1,6 +1,7 @@
 use crate::{
     math::Vec3,
     tracer::{
+        aabb::AABB,
         hittable::Hittable,
         material::Material,
         ray::{Ray, RayHit},
@@ -55,5 +56,15 @@ impl Hittable for Sphere {
         } else {
             RayHit::NONE
         }
+    }
+
+    fn center(&self) -> Vec3 {
+        self.center
+    }
+
+    fn bounding_box(&self) -> AABB {
+        let min = self.center - Vec3::from_value(self.radius);
+        let max = self.center + Vec3::from_value(self.radius);
+        AABB::new(min, max)
     }
 }

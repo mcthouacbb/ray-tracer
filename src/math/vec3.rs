@@ -13,7 +13,7 @@ impl Vec3 {
         Self { elems: [x, y, z] }
     }
 
-    pub fn from_value(v: f32) -> Self {
+    pub const fn from_value(v: f32) -> Self {
         Self { elems: [v, v, v] }
     }
 

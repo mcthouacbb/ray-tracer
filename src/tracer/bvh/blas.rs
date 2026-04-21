@@ -170,7 +170,7 @@ impl BLAS {
         (best_axis, best_split_pos, best_sah)
     }
 
-    pub fn partition_primitives(
+    fn partition_primitives(
         &mut self,
         node_idx: usize,
         split_axis: usize,

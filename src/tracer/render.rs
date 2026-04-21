@@ -1,4 +1,8 @@
-use std::f32;
+use std::{
+    f32,
+    sync::atomic::{AtomicU32, Ordering},
+    thread,
+};
 
 use image::{Rgb, RgbImage};
 use indicatif::ProgressBar;
@@ -9,9 +13,7 @@ use crate::{
     tracer::{
         camera::Camera,
         hittable::Hittable,
-        material::Material,
         ray::{Ray, RayHit},
-        sphere::Sphere,
     },
 };
 
@@ -56,111 +58,88 @@ pub fn ray_color(
     }
 }
 
-pub fn render_image(image: &mut RgbImage, spp: u32, max_depth: u32) {
+pub fn render_image(
+    image: &mut RgbImage,
+    camera: &Camera,
+    camera_mat: &Mat4,
+    objects: &[Box<dyn Hittable>],
+    spp: u32,
+    max_depth: u32,
+    num_threads: u32,
+) {
     let width = image.width();
     let height = image.height();
-    let aspect_ratio = width as f32 / height as f32;
-
-    let look_from = Vec3::new(13.0, 2.0, 3.0);
-    let look_at = Vec3::new(0.0, 0.0, 0.0);
-    let look_up = Vec3::new(0.0, 1.0, 0.0);
-
-    let camera_mat = Mat4::look_at(&look_from, &look_at, &look_up);
-
-    let camera = Camera::new(
-        aspect_ratio,
-        20.0f32.to_radians(),
-        10.0,
-        0.6f32.to_radians(),
-    );
+    assert!(width % 4 == 0 && height % 4 == 0);
 
     let progress_bar = ProgressBar::new((width * height) as u64);
 
-    let mut objects = Vec::<Box<dyn Hittable>>::new();
-    let ground_material = Material::new_lambertian(Vec3::new(0.5, 0.5, 0.5));
-    objects.push(Box::new(Sphere::new(
-        Vec3::new(0.0, -1000.0, 0.0),
-        1000.0,
-        &ground_material,
-    )));
+    let tiles = (0..width * height / 16)
+        .map(|tile_idx| (tile_idx % (width / 4), tile_idx / (width / 4)))
+        .collect::<Vec<(u32, u32)>>();
 
-    let mut rng = Xoshiro256PlusPlus::from_rng(&mut rand::rng());
+    let pixel_buffer = (0..width * height)
+        .map(|_| AtomicU32::new(0))
+        .collect::<Vec<AtomicU32>>();
 
-    for a in -11..11 {
-        for b in -11..11 {
-            let center = Vec3::new(
-                a as f32 + rng.random_range(0.0..0.9),
-                0.2,
-                b as f32 + rng.random_range(0.0..0.9),
-            );
+    thread::scope(|s| {
+        for thread_id in 0..num_threads {
+            let begin_idx = thread_id as usize * tiles.len() / num_threads as usize;
+            let end_idx = (thread_id + 1) as usize * tiles.len() / num_threads as usize;
+            let thread_tile_slice = &tiles[begin_idx..end_idx];
+            let thread_tiles = thread_tile_slice.to_vec();
 
-            if (center - Vec3::new(4.0, 0.2, 0.0)).len() > 0.9 {
-                let choose_mat = rng.random_range(0.0..1.0);
-                if choose_mat < 0.8 {
-                    let albedo = Vec3::random_range(0.0, 1.0, &mut rng)
-                        .pairwise(&Vec3::random_range(0.0, 1.0, &mut rng));
-                    let lambertian = Material::new_lambertian(albedo);
-                    objects.push(Box::new(Sphere::new(center, 0.2, &lambertian)));
-                } else if choose_mat < 0.95 {
-                    let albedo = Vec3::random_range(0.5, 1.0, &mut rng);
-                    let fuzz = rng.random_range(0.0..=0.5);
-                    let metal = Material::new_metal(albedo, fuzz);
-                    objects.push(Box::new(Sphere::new(center, 0.2, &metal)));
-                } else {
-                    let dielectric = Material::new_dielectric(1.5);
-                    objects.push(Box::new(Sphere::new(center, 0.2, &dielectric)));
+            s.spawn(|| {
+                let mut rng = Xoshiro256PlusPlus::from_rng(&mut rand::rng());
+
+                for tile in thread_tiles {
+                    for py in 0..4 {
+                        for px in 0..4 {
+                            let x = 4 * tile.0 + px;
+                            let y = 4 * tile.1 + py;
+
+                            let mut accum_color = Vec3::ZERO;
+
+                            for _ in 0..spp {
+                                let jitter_x = rng.random_range(-0.5..=0.5f32);
+                                let jitter_y = rng.random_range(-0.5..=0.5f32);
+                                let u = (2.0 * (x as f32 + jitter_x) as f32 - width as f32 + 1.0)
+                                    / width as f32;
+                                let v = -(2.0 * (y as f32 + jitter_y) as f32 - height as f32 + 1.0)
+                                    / height as f32;
+
+                                let camera_ray = camera.get_ray_dir(u, v, &mut rng);
+                                let ray = Ray::new(
+                                    camera_mat.transform_pos(&camera_ray.origin()),
+                                    camera_mat.transform_dir(&camera_ray.dir()),
+                                );
+
+                                let color = ray_color(&ray, &objects, &mut rng, max_depth);
+                                accum_color += color;
+                            }
+
+                            let pixel_color = accum_color / spp as f32;
+                            let r = (linear_to_srgb(pixel_color.x()) * 255.0 + 0.5) as u8;
+                            let g = (linear_to_srgb(pixel_color.y()) * 255.0 + 0.5) as u8;
+                            let b = (linear_to_srgb(pixel_color.z()) * 255.0 + 0.5) as u8;
+                            let rgb_u32 = (r as u32) << 16 | (g as u32) << 8 | b as u32;
+                            pixel_buffer[(y * width + x) as usize]
+                                .store(rgb_u32, Ordering::Relaxed);
+                        }
+                    }
+
+                    progress_bar.inc(16);
                 }
-            }
+            });
         }
-    }
-
-    objects.push(Box::new(Sphere::new(
-        Vec3::new(0.0, 1.0, 0.0),
-        1.0,
-        &Material::new_dielectric(1.5),
-    )));
-    objects.push(Box::new(Sphere::new(
-        Vec3::new(-4.0, 1.0, 0.0),
-        1.0,
-        &Material::new_lambertian(Vec3::new(0.4, 0.2, 0.1)),
-    )));
-    objects.push(Box::new(Sphere::new(
-        Vec3::new(4.0, 1.0, 0.0),
-        1.0,
-        &Material::new_metal(Vec3::new(0.7, 0.6, 0.5), 0.0),
-    )));
+    });
 
     for y in 0..height {
         for x in 0..width {
-            let mut accum_color = Vec3::ZERO;
-
-            for _ in 0..spp {
-                let jitter_x = rng.random_range(-0.5..=0.5f32);
-                let jitter_y = rng.random_range(-0.5..=0.5f32);
-                let u = (2.0 * (x as f32 + jitter_x) as f32 - width as f32 + 1.0) / width as f32;
-                let v = -(2.0 * (y as f32 + jitter_y) as f32 - height as f32 + 1.0) / height as f32;
-
-                let camera_ray = camera.get_ray_dir(u, v, &mut rng);
-                let ray = Ray::new(
-                    camera_mat.transform_pos(&camera_ray.origin()),
-                    camera_mat.transform_dir(&camera_ray.dir()),
-                );
-
-                let color = ray_color(&ray, &objects, &mut rng, max_depth);
-                accum_color += color;
-            }
-
-            let pixel_color = accum_color / spp as f32;
-            image.put_pixel(
-                x,
-                y,
-                Rgb([
-                    (linear_to_srgb(pixel_color.x()) * 255.0 + 0.5) as u8,
-                    (linear_to_srgb(pixel_color.y()) * 255.0 + 0.5) as u8,
-                    (linear_to_srgb(pixel_color.z()) * 255.0 + 0.5) as u8,
-                ]),
-            );
-            progress_bar.inc(1);
+            let rgb_u32 = pixel_buffer[(y * width + x) as usize].load(Ordering::Relaxed);
+            let r = rgb_u32 >> 16;
+            let g = (rgb_u32 >> 8) & 0xFF;
+            let b = rgb_u32 & 0xFF;
+            image.put_pixel(x, y, Rgb([r as u8, g as u8, b as u8]));
         }
     }
 

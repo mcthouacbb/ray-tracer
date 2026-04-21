@@ -1,5 +1,5 @@
 use rand::RngExt;
-use std::ops::{self, Index, IndexMut, RangeBounds, RangeInclusive};
+use std::ops;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Vec3 {
@@ -135,7 +135,7 @@ impl Vec3 {
     }
 }
 
-impl Index<usize> for Vec3 {
+impl ops::Index<usize> for Vec3 {
     type Output = f32;
 
     fn index(&self, index: usize) -> &Self::Output {
@@ -143,7 +143,7 @@ impl Index<usize> for Vec3 {
     }
 }
 
-impl IndexMut<usize> for Vec3 {
+impl ops::IndexMut<usize> for Vec3 {
     fn index_mut(&mut self, index: usize) -> &mut Self::Output {
         &mut self.elems[index]
     }

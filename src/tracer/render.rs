@@ -43,9 +43,6 @@ pub fn ray_color(
     }
 
     let mut ray_hit = RayHit::NONE;
-    // for object in objects {
-    // ray_hit.replace_if_closer(&object.trace(ray));
-    // }
     bvh.traverse(ray, &mut ray_hit, objects);
 
     ray_hit.finalize(&ray);

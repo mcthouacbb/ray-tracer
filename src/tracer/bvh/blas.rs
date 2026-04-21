@@ -55,7 +55,7 @@ impl BLAS {
             left: 0,
             right: primitives.len() as u32,
         });
-        result.nodes[0].aabb = result.calc_node_bounds(0, primitives);
+        result.calc_node_bounds(0, primitives);
 
         result.build_bvh(0, primitives);
 
@@ -82,13 +82,11 @@ impl BLAS {
                 ray_hit.replace_if_closer(&hit);
             }
         } else {
-            let (close_idx, far_idx) = node.left_right_idx();
-            let mut close_node = &self.nodes[close_idx];
-            let mut far_node = &self.nodes[far_idx];
-            let mut close_dist = close_node.aabb.hit(ray);
-            let mut far_dist = far_node.aabb.hit(ray);
+            let (mut close_idx, mut far_idx) = node.left_right_idx();
+            let mut close_dist = self.nodes[close_idx].aabb.hit(ray);
+            let mut far_dist = self.nodes[far_idx].aabb.hit(ray);
             if close_dist > far_dist {
-                mem::swap(&mut close_node, &mut far_node);
+                mem::swap(&mut close_idx, &mut far_idx);
                 mem::swap(&mut close_dist, &mut far_dist);
             }
 
@@ -101,14 +99,13 @@ impl BLAS {
         }
     }
 
-    fn calc_node_bounds(&self, node_idx: usize, primitives: &[Box<dyn Hittable>]) -> AABB {
-        let node = &self.nodes[node_idx];
-        let mut node_bounds = AABB::NEG_INF;
+    fn calc_node_bounds(&mut self, node_idx: usize, primitives: &[Box<dyn Hittable>]) {
+        let node = &mut self.nodes[node_idx];
+        node.aabb = AABB::NEG_INF;
         for i in node.primitives() {
             let primitive = primitives[self.primitive_indices[i] as usize].deref();
-            node_bounds.expand(&primitive.bounding_box());
+            node.aabb.expand(&primitive.bounding_box());
         }
-        node_bounds
     }
 
     fn find_split_plane(

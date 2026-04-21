@@ -118,35 +118,52 @@ impl BLAS {
         let mut best_axis = 0;
         let mut best_split_pos = 0.0;
         for axis in 0..3 {
-            for i in node.primitives() {
-                let split_pos = primitives[self.primitive_indices[i] as usize].center()[axis];
-                let mut left_aabb = AABB::NEG_INF;
-                let mut right_aabb = AABB::NEG_INF;
-                let mut left_count = 0;
-                let mut right_count = 0;
+            const NUM_BINS: usize = 16;
 
-                for j in node.primitives() {
-                    let primitive = primitives[self.primitive_indices[j] as usize].deref();
-                    if primitive.center()[axis] < split_pos {
-                        left_aabb.expand(&primitive.bounding_box());
-                        left_count += 1;
-                    } else {
-                        right_aabb.expand(&primitive.bounding_box());
-                        right_count += 1;
+            let mut bins = [(AABB::NEG_INF, 0u32); NUM_BINS];
+            let bin_start = node.aabb.min()[axis];
+            let bin_size = node.aabb.extent()[axis] / NUM_BINS as f32;
+
+            for i in node.primitives() {
+                let primitive = primitives[self.primitive_indices[i] as usize].deref();
+                let pos = primitive.center()[axis];
+                let bin = ((pos - bin_start) / bin_size) as usize;
+                bins[bin.min(NUM_BINS - 1)]
+                    .0
+                    .expand(&primitive.bounding_box());
+
+                bins[bin.min(NUM_BINS - 1)].1 += 1;
+            }
+
+            let mut right_bins = [(AABB::NEG_INF, 0u32); NUM_BINS - 1];
+            for i in (0..NUM_BINS - 1).rev() {
+                if i < NUM_BINS - 2 {
+                    right_bins[i] = right_bins[i + 1];
+                }
+
+                right_bins[i].0.expand(&bins[i + 1].0);
+                right_bins[i].1 += bins[i + 1].1;
+            }
+
+            let mut left_aabb = bins[0].0;
+            let mut left_count = bins[0].1;
+            for i in 1..NUM_BINS {
+                let right_aabb = right_bins[i - 1].0;
+                let right_count = right_bins[i - 1].1;
+
+                if right_count > 0 && left_count > 0 {
+                    let sah = left_aabb.surface_area() * left_count as f32
+                        + right_aabb.surface_area() * right_count as f32;
+
+                    if sah < best_sah {
+                        best_sah = sah;
+                        best_axis = axis;
+                        best_split_pos = bin_start + bin_size * i as f32;
                     }
                 }
 
-                if left_count == 0 || right_count == 0 {
-                    continue;
-                }
-                let sah = left_aabb.surface_area() * left_count as f32
-                    + right_aabb.surface_area() * right_count as f32;
-
-                if sah < best_sah {
-                    best_sah = sah;
-                    best_axis = axis;
-                    best_split_pos = split_pos;
-                }
+                left_aabb.expand(&bins[i].0);
+                left_count += bins[i].1;
             }
         }
 

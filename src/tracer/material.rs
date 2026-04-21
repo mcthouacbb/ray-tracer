@@ -46,7 +46,7 @@ impl Lambertian {
             }
         };
         let scatter_origin = ray.origin() + ray.dir() * ray_hit.dist();
-        let scattered_ray = Ray::new(scatter_origin + scatter_dir * 1e-4, scatter_dir);
+        let scattered_ray = Ray::new(scatter_origin + ray_hit.normal() * 1e-4, scatter_dir);
 
         Some(ScatterResult::new(scattered_ray, self.albedo))
     }
@@ -73,7 +73,7 @@ impl Metal {
             }
         };
         let scatter_origin = ray.origin() + ray.dir() * ray_hit.dist();
-        let scattered_ray = Ray::new(scatter_origin + scatter_dir * 1e-4, scatter_dir);
+        let scattered_ray = Ray::new(scatter_origin + ray_hit.normal() * 1e-4, scatter_dir);
 
         Some(ScatterResult::new(scattered_ray, self.albedo))
     }
@@ -115,7 +115,7 @@ impl Dielectric {
         };
         let scatter_origin = ray.origin() + ray.dir() * ray_hit.dist();
 
-        let scattered_ray = Ray::new(scatter_origin + scatter_dir * 1e-4, scatter_dir);
+        let scattered_ray = Ray::new(scatter_origin + ray_hit.normal() * 1e-4, scatter_dir);
 
         Some(ScatterResult::new(scattered_ray, Vec3::new(1.0, 1.0, 1.0)))
     }

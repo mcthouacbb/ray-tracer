@@ -1,7 +1,7 @@
 mod math;
 mod tracer;
 
-use std::fs::File;
+use std::{fs::File, time::Instant};
 
 use image::{ImageFormat, RgbImage};
 use rand::{RngExt, SeedableRng, rngs::Xoshiro256PlusPlus};
@@ -88,7 +88,12 @@ fn main() {
     )));
 
     let mut image = RgbImage::new(WIDTH, HEIGHT);
+    let t1 = Instant::now();
     render_image(&mut image, &camera, &camera_mat, &objects, SPP, 25, THREADS);
+    let t2 = Instant::now();
+
+    let time = t2 - t1;
+    println!("Time spent rendering: {}s", time.as_secs_f64());
 
     let mut file = match File::create("render.png") {
         Ok(file) => file,

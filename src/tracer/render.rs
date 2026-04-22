@@ -1,6 +1,10 @@
 use std::{
+    collections::VecDeque,
     f32,
-    sync::atomic::{AtomicU32, Ordering},
+    sync::{
+        Arc, Mutex,
+        atomic::{AtomicU32, Ordering},
+    },
     thread,
 };
 
@@ -81,23 +85,28 @@ pub fn render_image(
 
     let tiles = (0..width * height / 16)
         .map(|tile_idx| (tile_idx % (width / 4), tile_idx / (width / 4)))
-        .collect::<Vec<(u32, u32)>>();
+        .collect::<VecDeque<(u32, u32)>>();
+
+    let tile_queue = Arc::new(Mutex::new(tiles));
 
     let pixel_buffer = (0..width * height)
         .map(|_| AtomicU32::new(0))
         .collect::<Vec<AtomicU32>>();
 
     thread::scope(|s| {
-        for thread_id in 0..num_threads {
-            let begin_idx = thread_id as usize * tiles.len() / num_threads as usize;
-            let end_idx = (thread_id + 1) as usize * tiles.len() / num_threads as usize;
-            let thread_tile_slice = &tiles[begin_idx..end_idx];
-            let thread_tiles = thread_tile_slice.to_vec();
-
+        for _ in 0..num_threads {
             s.spawn(|| {
                 let mut rng = Xoshiro256PlusPlus::from_rng(&mut rand::rng());
 
-                for tile in thread_tiles {
+                loop {
+                    let mut result = tile_queue.lock().unwrap();
+                    if result.is_empty() {
+                        break;
+                    }
+
+                    let tile = result.pop_front().unwrap();
+                    std::mem::drop(result);
+
                     for py in 0..4 {
                         for px in 0..4 {
                             let x = 4 * tile.0 + px;

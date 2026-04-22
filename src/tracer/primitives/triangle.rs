@@ -8,20 +8,20 @@ use crate::{
     },
 };
 
-struct Triangle {
+pub struct Triangle {
     vertices: [Vec3; 3],
     material: Material,
 }
 
 impl Triangle {
-    fn new(a: Vec3, b: Vec3, c: Vec3, material: &Material) -> Self {
+    pub fn new(a: Vec3, b: Vec3, c: Vec3, material: &Material) -> Self {
         Self {
             vertices: [a, b, c],
             material: *material,
         }
     }
 
-    fn flat_normal(&self) -> Vec3 {
+    pub fn flat_normal(&self) -> Vec3 {
         let edge1 = self.vertices[1] - self.vertices[0];
         let edge2 = self.vertices[2] - self.vertices[0];
         edge1.cross(&edge2).normalized()

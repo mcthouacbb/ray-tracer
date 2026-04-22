@@ -4,12 +4,11 @@ mod tracer;
 use std::{fs::File, time::Instant};
 
 use image::{ImageFormat, RgbImage};
-use rand::{RngExt, SeedableRng, rngs::Xoshiro256PlusPlus};
 
 use crate::{
     math::{Mat4, Vec3},
     tracer::{
-        camera::Camera, hittable::Hittable, material::Material, primitives::sphere::Sphere,
+        camera::Camera, hittable::Hittable, material::Material, primitives::triangle::Triangle,
         render::render_image,
     },
 };
@@ -20,75 +19,26 @@ fn main() {
     const SPP: u32 = 500;
     const THREADS: u32 = 8;
 
-    let look_from = Vec3::new(13.0, 2.0, 3.0);
-    let look_at = Vec3::new(0.0, 0.0, 0.0);
+    let look_from = Vec3::new(0.0, 0.0, 0.0);
+    let look_at = Vec3::new(0.0, 0.0, -1.0);
     let look_up = Vec3::new(0.0, 1.0, 0.0);
 
     let camera_mat = Mat4::look_at(&look_from, &look_at, &look_up);
 
     let camera = Camera::new(
         WIDTH as f32 / HEIGHT as f32,
-        20.0f32.to_radians(),
-        10.0,
-        0.6f32.to_radians(),
+        90.0f32.to_radians(),
+        1.0,
+        0.0f32.to_radians(),
     );
 
     let mut objects = Vec::<Box<dyn Hittable>>::new();
-    let ground_material = Material::new_lambertian(Vec3::new(0.5, 0.5, 0.5));
-    objects.push(Box::new(Sphere::new(
-        Vec3::new(0.0, -1000.0, 0.0),
-        1000.0,
-        &ground_material,
-    )));
-
-    let mut rng = Xoshiro256PlusPlus::seed_from_u64(283748328);
-
-    for a in -11..11 {
-        for b in -11..11 {
-            let center = Vec3::new(
-                a as f32 + rng.random_range(0.0..0.9),
-                0.2,
-                b as f32 + rng.random_range(0.0..0.9),
-            );
-
-            if (center - Vec3::new(4.0, 0.2, 0.0)).len() > 0.9 {
-                let choose_mat = rng.random_range(0.0..1.0);
-                if choose_mat < 0.5 {
-                    let albedo = Vec3::random_range(0.0, 1.0, &mut rng)
-                        .pairwise(&Vec3::random_range(0.0, 1.0, &mut rng));
-                    let lambertian = Material::new_lambertian(albedo);
-                    objects.push(Box::new(Sphere::new(center, 0.2, &lambertian)));
-                } else if choose_mat < 0.8 {
-                    let color = Vec3::random_range(0.5, 1.0, &mut rng);
-                    let emissive = Material::new_emissive(color);
-                    objects.push(Box::new(Sphere::new(center, 0.2, &emissive)));
-                } else if choose_mat < 0.95 {
-                    let albedo = Vec3::random_range(0.5, 1.0, &mut rng);
-                    let fuzz = rng.random_range(0.0..=0.5);
-                    let metal = Material::new_metal(albedo, fuzz);
-                    objects.push(Box::new(Sphere::new(center, 0.2, &metal)));
-                } else {
-                    let dielectric = Material::new_dielectric(1.5);
-                    objects.push(Box::new(Sphere::new(center, 0.2, &dielectric)));
-                }
-            }
-        }
-    }
-
-    objects.push(Box::new(Sphere::new(
-        Vec3::new(0.0, 1.0, 0.0),
-        1.0,
-        &Material::new_dielectric(1.5),
-    )));
-    objects.push(Box::new(Sphere::new(
-        Vec3::new(-4.0, 1.0, 0.0),
-        1.0,
-        &Material::new_lambertian(Vec3::new(0.4, 0.2, 0.1)),
-    )));
-    objects.push(Box::new(Sphere::new(
-        Vec3::new(4.0, 1.0, 0.0),
-        1.0,
-        &Material::new_metal(Vec3::new(0.7, 0.6, 0.5), 0.0),
+    let material = Material::new_lambertian(Vec3::new(0.5, 1.0, 1.0));
+    objects.push(Box::new(Triangle::new(
+        Vec3::new(0.0, 0.0, -2.0),
+        Vec3::new(1.0, 0.0, -2.0),
+        Vec3::new(0.0, 1.0, -2.0),
+        &material,
     )));
 
     let mut image = RgbImage::new(WIDTH, HEIGHT);

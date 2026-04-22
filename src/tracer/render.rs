@@ -62,7 +62,7 @@ pub fn ray_color(
         let emissive_color = ray_hit.material().emitted();
         emissive_color + scatter_color
     } else {
-        0.35 * sky_color(&ray)
+        sky_color(&ray)
     }
 }
 

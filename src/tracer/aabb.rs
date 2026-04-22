@@ -26,6 +26,10 @@ impl AABB {
         self.min
     }
 
+    pub fn center(&self) -> Vec3 {
+        0.5 * (self.max + self.min)
+    }
+
     pub fn extent(&self) -> Vec3 {
         self.max - self.min
     }
@@ -33,6 +37,11 @@ impl AABB {
     pub fn surface_area(&self) -> f32 {
         let extent = self.extent();
         2.0 * (extent.x() * extent.y() + extent.y() * extent.z() + extent.z() * extent.x())
+    }
+
+    pub fn add_point(&mut self, pt: Vec3) {
+        self.min = self.min.min(&pt);
+        self.max = self.max.max(&pt);
     }
 
     pub fn expand(&mut self, other: &Self) {

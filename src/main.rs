@@ -9,8 +9,8 @@ use rand::{RngExt, SeedableRng, rngs::Xoshiro256PlusPlus};
 use crate::{
     math::{Mat4, Vec3},
     tracer::{
-        camera::Camera, hittable::Hittable, material::Material, render::render_image,
-        sphere::Sphere,
+        camera::Camera, hittable::Hittable, material::Material, primitives::sphere::Sphere,
+        render::render_image,
     },
 };
 

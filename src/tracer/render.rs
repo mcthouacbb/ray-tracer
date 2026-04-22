@@ -23,7 +23,7 @@ use crate::{
 };
 
 pub fn sky_color(ray: &Ray) -> Vec3 {
-    let a = 0.5 * ray.dir().y() + 0.5;
+    let a = 0.5 * ray.dir().normalized().y() + 0.5;
     (1.0 - a) * Vec3::new(1.0, 1.0, 1.0) + a * Vec3::new(0.5, 0.7, 1.0)
 }
 

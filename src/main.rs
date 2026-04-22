@@ -14,14 +14,22 @@ use crate::{
 };
 
 fn load_obj_model(file_name: &str, material: &Material, objects: &mut Vec<Box<dyn Hittable>>) {
-    match tobj::load_obj(file_name, &tobj::LoadOptions::default()) {
+    match tobj::load_obj(
+        file_name,
+        &tobj::LoadOptions {
+            triangulate: true,
+            single_index: true,
+            ..Default::default()
+        },
+    ) {
         Ok((models, _)) => {
             for model in models {
                 let mesh = &model.mesh;
                 for indices in mesh.indices.chunks_exact(3) {
                     let mut vertices = [Vec3::ZERO; 3];
-                    for (j, &i) in indices.iter().enumerate() {
-                        vertices[j] = Vec3::new(
+                    for v in 0..3 {
+                        let i = indices[v] as usize;
+                        vertices[v] = Vec3::new(
                             mesh.positions[(3 * i) as usize],
                             mesh.positions[(3 * i + 1) as usize],
                             mesh.positions[(3 * i + 2) as usize],
@@ -44,7 +52,7 @@ fn main() {
     const SPP: u32 = 500;
     const THREADS: u32 = 8;
 
-    let look_from = Vec3::new(0.0, 0.0, 0.0);
+    let look_from = Vec3::new(5.0, 0.0, 30.0);
     let look_at = Vec3::new(0.0, 0.0, -1.0);
     let look_up = Vec3::new(0.0, 1.0, 0.0);
 
@@ -58,7 +66,7 @@ fn main() {
     );
 
     let mut objects = Vec::<Box<dyn Hittable>>::new();
-    let material = Material::new_lambertian(Vec3::new(0.5, 1.0, 1.0));
+    let material = Material::new_lambertian(Vec3::new(0.404, 0.902, 0.388));
     load_obj_model("res/villager.obj", &material, &mut objects);
 
     let mut image = RgbImage::new(WIDTH, HEIGHT);

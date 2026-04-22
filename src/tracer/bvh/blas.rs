@@ -40,6 +40,8 @@ pub struct BLAS {
 }
 
 impl BLAS {
+    const NUM_BINS: usize = 16;
+
     pub fn create(primitives: &[Box<dyn Hittable>]) -> Self {
         let mut result = Self {
             nodes: Vec::with_capacity(2 * primitives.len() - 1),
@@ -112,32 +114,30 @@ impl BLAS {
         &self,
         node_idx: usize,
         primitives: &[Box<dyn Hittable>],
-    ) -> (usize, f32, f32) {
+    ) -> (usize, usize, f32) {
         let node = &self.nodes[node_idx];
         let mut best_sah = f32::INFINITY;
         let mut best_axis = 0;
-        let mut best_split_pos = 0.0;
+        let mut best_split_pos = 0;
         for axis in 0..3 {
-            const NUM_BINS: usize = 16;
-
-            let mut bins = [(AABB::NEG_INF, 0u32); NUM_BINS];
+            let mut bins = [(AABB::NEG_INF, 0u32); Self::NUM_BINS];
             let bin_start = node.aabb.min()[axis];
-            let bin_size = node.aabb.extent()[axis] / NUM_BINS as f32;
+            let bin_size = node.aabb.extent()[axis] / Self::NUM_BINS as f32;
 
             for i in node.primitives() {
                 let primitive = primitives[self.primitive_indices[i] as usize].deref();
                 let pos = primitive.center()[axis];
                 let bin = ((pos - bin_start) / bin_size) as usize;
-                bins[bin.min(NUM_BINS - 1)]
+                bins[bin.min(Self::NUM_BINS - 1)]
                     .0
                     .expand(&primitive.bounding_box());
 
-                bins[bin.min(NUM_BINS - 1)].1 += 1;
+                bins[bin.min(Self::NUM_BINS - 1)].1 += 1;
             }
 
-            let mut right_bins = [(AABB::NEG_INF, 0u32); NUM_BINS - 1];
-            for i in (0..NUM_BINS - 1).rev() {
-                if i < NUM_BINS - 2 {
+            let mut right_bins = [(AABB::NEG_INF, 0u32); Self::NUM_BINS - 1];
+            for i in (0..Self::NUM_BINS - 1).rev() {
+                if i < Self::NUM_BINS - 2 {
                     right_bins[i] = right_bins[i + 1];
                 }
 
@@ -147,7 +147,7 @@ impl BLAS {
 
             let mut left_aabb = bins[0].0;
             let mut left_count = bins[0].1;
-            for i in 1..NUM_BINS {
+            for i in 1..Self::NUM_BINS {
                 let right_aabb = right_bins[i - 1].0;
                 let right_count = right_bins[i - 1].1;
 
@@ -158,7 +158,7 @@ impl BLAS {
                     if sah < best_sah {
                         best_sah = sah;
                         best_axis = axis;
-                        best_split_pos = bin_start + bin_size * i as f32;
+                        best_split_pos = i;
                     }
                 }
 
@@ -174,20 +174,28 @@ impl BLAS {
         &mut self,
         node_idx: usize,
         split_axis: usize,
-        split_pos: f32,
+        split_pos: usize,
         primitives: &[Box<dyn Hittable>],
     ) -> u32 {
         let mut i = self.nodes[node_idx].left as usize;
         let mut j = self.nodes[node_idx].right as usize - 1;
+        let bin_start = self.nodes[node_idx].aabb.min()[split_axis];
+        let bin_size = self.nodes[node_idx].aabb.extent()[split_axis] / Self::NUM_BINS as f32;
         loop {
             while i < j
-                && primitives[self.primitive_indices[i] as usize].center()[split_axis] < split_pos
+                && (((primitives[self.primitive_indices[i] as usize].center()[split_axis]
+                    - bin_start)
+                    / bin_size) as usize)
+                    < split_pos
             {
                 i += 1;
             }
 
             while i < j
-                && primitives[self.primitive_indices[j] as usize].center()[split_axis] >= split_pos
+                && (((primitives[self.primitive_indices[j] as usize].center()[split_axis]
+                    - bin_start)
+                    / bin_size) as usize)
+                    >= split_pos
             {
                 j -= 1;
             }

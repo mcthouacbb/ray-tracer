@@ -8,6 +8,7 @@ use crate::{
     },
 };
 
+#[derive(Debug, Clone, Copy)]
 pub struct Triangle {
     vertices: [Vec3; 3],
     material: Material,
@@ -19,6 +20,10 @@ impl Triangle {
             vertices: [a, b, c],
             material: *material,
         }
+    }
+
+    pub fn vertices(&self) -> &[Vec3; 3] {
+        &self.vertices
     }
 
     pub fn flat_normal(&self) -> Vec3 {

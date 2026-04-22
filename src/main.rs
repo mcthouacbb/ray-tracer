@@ -8,12 +8,14 @@ use image::{ImageFormat, RgbImage};
 use crate::{
     math::{Mat4, Vec3},
     tracer::{
-        camera::Camera, hittable::Hittable, material::Material, primitives::triangle::Triangle,
-        render::render_image,
+        aabb::AABB, camera::Camera, hittable::Hittable, material::Material,
+        primitives::triangle::Triangle, render::render_image,
     },
 };
 
 fn load_obj_model(file_name: &str, material: &Material, objects: &mut Vec<Box<dyn Hittable>>) {
+    let mut tris = Vec::new();
+    let mut aabb = AABB::NEG_INF;
     match tobj::load_obj(
         file_name,
         &tobj::LoadOptions {
@@ -34,15 +36,35 @@ fn load_obj_model(file_name: &str, material: &Material, objects: &mut Vec<Box<dy
                             mesh.positions[(3 * i + 1) as usize],
                             mesh.positions[(3 * i + 2) as usize],
                         );
+                        aabb.add_point(vertices[v]);
                     }
-                    let tri = Triangle::new(vertices[0], vertices[1], vertices[2], material);
-                    objects.push(Box::new(tri));
+                    tris.push(Triangle::new(
+                        vertices[0],
+                        vertices[1],
+                        vertices[2],
+                        material,
+                    ));
                 }
             }
         }
         Err(err) => {
             eprintln!("Failed to load .obj file '{}': {}", file_name, err);
         }
+    }
+
+    let scale = 3.0 / (aabb.extent().x() + aabb.extent().y() + aabb.extent().z());
+
+    for tri in tris {
+        let mut new_vertices = [Vec3::ZERO; 3];
+        for i in 0..3 {
+            new_vertices[i] = (tri.vertices()[i] - aabb.center()) * scale
+        }
+        objects.push(Box::new(Triangle::new(
+            new_vertices[0],
+            new_vertices[1],
+            new_vertices[2],
+            material,
+        )));
     }
 }
 
@@ -52,8 +74,8 @@ fn main() {
     const SPP: u32 = 500;
     const THREADS: u32 = 8;
 
-    let look_from = Vec3::new(5.0, 0.0, 30.0);
-    let look_at = Vec3::new(0.0, 0.0, -1.0);
+    let look_from = Vec3::new(-0.2, -0.1, 1.3);
+    let look_at = Vec3::new(0.0, 0.1, 0.0);
     let look_up = Vec3::new(0.0, 1.0, 0.0);
 
     let camera_mat = Mat4::look_at(&look_from, &look_at, &look_up);

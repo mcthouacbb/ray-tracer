@@ -47,16 +47,18 @@ pub fn ray_color(
 
     ray_hit.finalize(&ray);
     if ray_hit.dist() < f32::INFINITY {
-        match ray_hit.material().scatter(&ray, &ray_hit, rng) {
+        let scatter_color = match ray_hit.material().scatter(&ray, &ray_hit, rng) {
             Some(scatter_result) => {
                 let sub_color =
                     ray_color(scatter_result.scattered_ray(), bvh, objects, rng, depth - 1);
                 scatter_result.attenuation().pairwise(&sub_color)
             }
-            None => Vec3::new(0.0, 0.0, 0.0),
-        }
+            None => Vec3::ZERO,
+        };
+        let emissive_color = ray_hit.material().emitted();
+        emissive_color + scatter_color
     } else {
-        sky_color(&ray)
+        0.35 * sky_color(&ray)
     }
 }
 

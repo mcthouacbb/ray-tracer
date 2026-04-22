@@ -29,7 +29,7 @@ impl ScatterResult {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub struct Lambertian {
+struct Lambertian {
     albedo: Vec3,
 }
 
@@ -53,7 +53,7 @@ impl Lambertian {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub struct Metal {
+struct Metal {
     albedo: Vec3,
     fuzz: f32,
 }
@@ -80,7 +80,7 @@ impl Metal {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub struct Dielectric {
+struct Dielectric {
     refractive_index: f32,
 }
 
@@ -122,10 +122,22 @@ impl Dielectric {
 }
 
 #[derive(Debug, Clone, Copy)]
+struct Emissive {
+    color: Vec3,
+}
+
+impl Emissive {
+    fn new(color: Vec3) -> Self {
+        Self { color }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
 pub enum Material {
     Lambertian(Lambertian),
     Metal(Metal),
     Dielectric(Dielectric),
+    Emissive(Emissive),
 }
 
 impl Material {
@@ -139,6 +151,16 @@ impl Material {
             Self::Lambertian(lambert) => lambert.scatter(ray, ray_hit, rng),
             Self::Metal(metal) => metal.scatter(ray, ray_hit, rng),
             Self::Dielectric(dielectric) => dielectric.scatter(ray, ray_hit, rng),
+            Self::Emissive(_) => None,
+        }
+    }
+
+    pub fn emitted(&self) -> Vec3 {
+        match self {
+            Self::Lambertian(_) => Vec3::ZERO,
+            Self::Metal(_) => Vec3::ZERO,
+            Self::Dielectric(_) => Vec3::ZERO,
+            Self::Emissive(emissive) => emissive.color,
         }
     }
 
@@ -152,5 +174,9 @@ impl Material {
 
     pub fn new_dielectric(refractive_index: f32) -> Self {
         Self::Dielectric(Dielectric::new(refractive_index))
+    }
+
+    pub fn new_emissive(color: Vec3) -> Self {
+        Self::Emissive(Emissive::new(color))
     }
 }

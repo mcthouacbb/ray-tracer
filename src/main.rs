@@ -53,11 +53,15 @@ fn main() {
 
             if (center - Vec3::new(4.0, 0.2, 0.0)).len() > 0.9 {
                 let choose_mat = rng.random_range(0.0..1.0);
-                if choose_mat < 0.8 {
+                if choose_mat < 0.5 {
                     let albedo = Vec3::random_range(0.0, 1.0, &mut rng)
                         .pairwise(&Vec3::random_range(0.0, 1.0, &mut rng));
                     let lambertian = Material::new_lambertian(albedo);
                     objects.push(Box::new(Sphere::new(center, 0.2, &lambertian)));
+                } else if choose_mat < 0.8 {
+                    let color = Vec3::random_range(0.5, 1.0, &mut rng);
+                    let emissive = Material::new_emissive(color);
+                    objects.push(Box::new(Sphere::new(center, 0.2, &emissive)));
                 } else if choose_mat < 0.95 {
                     let albedo = Vec3::random_range(0.5, 1.0, &mut rng);
                     let fuzz = rng.random_range(0.0..=0.5);

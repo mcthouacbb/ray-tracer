@@ -13,6 +13,31 @@ use crate::{
     },
 };
 
+fn load_obj_model(file_name: &str, material: &Material, objects: &mut Vec<Box<dyn Hittable>>) {
+    match tobj::load_obj(file_name, &tobj::LoadOptions::default()) {
+        Ok((models, _)) => {
+            for model in models {
+                let mesh = &model.mesh;
+                for indices in mesh.indices.chunks_exact(3) {
+                    let mut vertices = [Vec3::ZERO; 3];
+                    for (j, &i) in indices.iter().enumerate() {
+                        vertices[j] = Vec3::new(
+                            mesh.positions[(3 * i) as usize],
+                            mesh.positions[(3 * i + 1) as usize],
+                            mesh.positions[(3 * i + 2) as usize],
+                        );
+                    }
+                    let tri = Triangle::new(vertices[0], vertices[1], vertices[2], material);
+                    objects.push(Box::new(tri));
+                }
+            }
+        }
+        Err(err) => {
+            eprintln!("Failed to load .obj file '{}': {}", file_name, err);
+        }
+    }
+}
+
 fn main() {
     const WIDTH: u32 = 1200;
     const HEIGHT: u32 = 500;
@@ -34,12 +59,7 @@ fn main() {
 
     let mut objects = Vec::<Box<dyn Hittable>>::new();
     let material = Material::new_lambertian(Vec3::new(0.5, 1.0, 1.0));
-    objects.push(Box::new(Triangle::new(
-        Vec3::new(0.0, 0.0, -2.0),
-        Vec3::new(1.0, 0.0, -2.0),
-        Vec3::new(0.0, 1.0, -2.0),
-        &material,
-    )));
+    load_obj_model("res/villager.obj", &material, &mut objects);
 
     let mut image = RgbImage::new(WIDTH, HEIGHT);
     let t1 = Instant::now();

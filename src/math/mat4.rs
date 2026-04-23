@@ -8,8 +8,8 @@ pub struct Mat4 {
 }
 
 impl Mat4 {
-    const ZERO: Self = Self::from_elems(&[0.0; 16]);
-    const IDENTITY: Self = Self::from_elems(&[
+    pub const ZERO: Self = Self::from_elems(&[0.0; 16]);
+    pub const IDENTITY: Self = Self::from_elems(&[
         1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0,
     ]);
 

@@ -6,3 +6,4 @@ pub mod material;
 pub mod primitives;
 pub mod ray;
 pub mod render;
+pub mod scene;

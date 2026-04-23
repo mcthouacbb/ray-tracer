@@ -64,6 +64,10 @@ impl BLAS {
         result
     }
 
+    pub fn bounding_box(&self) -> AABB {
+        self.nodes[0].aabb
+    }
+
     pub fn traverse(&self, ray: &Ray, ray_hit: &mut RayHit, primitives: &[Box<dyn Hittable>]) {
         if self.nodes[0].aabb.hit(ray) < f32::INFINITY {
             self.traverse_impl(0, ray, ray_hit, primitives);

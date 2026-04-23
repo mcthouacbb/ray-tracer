@@ -43,6 +43,8 @@ impl BLAS {
     const NUM_BINS: usize = 16;
 
     pub fn create(primitives: &[Box<dyn Hittable>]) -> Self {
+        assert!(primitives.len() > 0);
+
         let mut result = Self {
             nodes: Vec::with_capacity(2 * primitives.len() - 1),
             primitive_indices: Vec::with_capacity(primitives.len()),

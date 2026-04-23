@@ -22,8 +22,14 @@ impl Transform {
         Self::new(
             from,
             &Quat::from_matrix(rotation_mat),
-            &Vec3::new(1.0, 1.0, 1.0),
+            &Vec3::from_value(1.0),
         )
+    }
+
+    pub fn look_at_scale(from: &Vec3, at: &Vec3, up: &Vec3, scale: &Vec3) -> Self {
+        let mut result = Self::look_at(from, at, up);
+        result.scale = *scale;
+        result
     }
 
     pub fn position(&self) -> Vec3 {

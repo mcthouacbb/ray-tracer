@@ -12,10 +12,8 @@ pub struct SubObject {
 }
 
 impl SubObject {
-    pub fn new() -> Self {
-        Self {
-            primitives: Vec::new(),
-        }
+    pub fn new(primitives: Vec<Box<dyn Hittable>>) -> Self {
+        Self { primitives }
     }
 
     pub fn primitives(&self) -> &Vec<Box<dyn Hittable>> {
@@ -42,7 +40,7 @@ pub struct Scene {
 impl Scene {
     pub fn new() -> Self {
         Self {
-            global: SubObject::new(),
+            global: SubObject::new(Vec::new()),
             meshes: Vec::new(),
             blas_list: Vec::new(),
             instances: Vec::new(),
@@ -55,6 +53,8 @@ impl Scene {
     }
 
     pub fn add_mesh(&mut self, mesh: SubObject) -> MeshId {
+        assert!(mesh.primitives().len() > 0);
+
         let id = self.meshes.len() as u32;
         self.blas_list.push(BLAS::create(mesh.primitives()));
         self.meshes.push(mesh);
@@ -69,7 +69,9 @@ impl Scene {
     }
 
     pub fn finalize(&mut self) {
-        self.tlas = Some(BLAS::create(self.global.primitives()));
+        if self.global.primitives().len() > 0 {
+            self.tlas = Some(BLAS::create(self.global.primitives()));
+        }
     }
 
     pub fn get_mesh(&self, mesh_id: MeshId) -> &SubObject {
@@ -85,13 +87,17 @@ impl Scene {
     }
 
     pub fn trace(&self, ray: &Ray) -> RayHit {
-        let tlas = self.tlas.as_ref().unwrap();
         let mut ray_hit = RayHit::NONE;
-        tlas.traverse(ray, &mut ray_hit, self.global.primitives());
+
+        if let Some(tlas) = self.tlas.as_ref() {
+            tlas.traverse(ray, &mut ray_hit, self.global.primitives());
+        }
 
         for instance in &self.instances {
             instance.traverse(ray, &mut ray_hit, self);
         }
+
+        ray_hit.finalize(&ray);
 
         ray_hit
     }

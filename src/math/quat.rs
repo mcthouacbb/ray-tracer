@@ -24,34 +24,34 @@ impl Quat {
         if trace > 0.0 {
             let s = 2.0 * (trace + 1.0).sqrt();
             Self::new(
-                (mat[2][1] - mat[1][2]) / s,
-                (mat[0][2] - mat[2][0]) / s,
-                (mat[1][0] - mat[0][1]) / s,
+                (mat[1][2] - mat[2][1]) / s,
+                (mat[2][0] - mat[0][2]) / s,
+                (mat[0][1] - mat[1][0]) / s,
                 0.25 * s,
             )
         } else if mat[0][0] > mat[1][1] && mat[0][0] > mat[2][2] {
             let s = 2.0 * (1.0 + mat[0][0] - mat[1][1] - mat[2][2]).sqrt();
             Self::new(
                 0.25 * s,
-                (mat[0][1] + mat[1][0]) / s,
-                (mat[0][2] + mat[2][0]) / s,
-                (mat[2][1] - mat[1][2]) / s,
+                (mat[1][0] + mat[0][1]) / s,
+                (mat[2][0] + mat[0][2]) / s,
+                (mat[1][2] - mat[2][1]) / s,
             )
         } else if mat[1][1] > mat[2][2] {
             let s = 2.0 * (1.0 + mat[1][1] - mat[0][0] - mat[2][2]).sqrt();
             Self::new(
-                (mat[0][1] + mat[1][0]) / s,
+                (mat[1][0] + mat[0][1]) / s,
                 0.25 * s,
-                (mat[1][2] + mat[2][1]) / s,
-                (mat[0][2] - mat[2][0]) / s,
+                (mat[2][1] + mat[1][2]) / s,
+                (mat[2][0] - mat[0][2]) / s,
             )
         } else {
             let s = 2.0 * (1.0 + mat[2][2] - mat[1][1] - mat[0][0]);
             Self::new(
-                (mat[0][2] + mat[2][0]) / s,
-                (mat[1][2] + mat[2][1]) / s,
+                (mat[2][0] + mat[0][2]) / s,
+                (mat[2][1] + mat[1][2]) / s,
                 0.25 * s,
-                (mat[1][0] - mat[0][1]) / s,
+                (mat[0][1] - mat[1][0]) / s,
             )
         }
     }

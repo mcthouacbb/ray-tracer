@@ -83,12 +83,12 @@ impl Mat4 {
         result
     }
 
-    pub fn look_at(from: &Vec3, to: &Vec3, up: &Vec3) -> Self {
-        let forward = (*to - *from).normalized();
+    pub fn look_at(from: &Vec3, at: &Vec3, up: &Vec3) -> Self {
+        let forward = (*at - *from).normalized();
         let right = forward.cross(&*up).normalized();
         let up = right.cross(&forward);
 
-        let mut result = Self::ZERO;
+        let mut result = Self::IDENTITY;
         result[0][0] = right[0];
         result[0][1] = right[1];
         result[0][2] = right[2];

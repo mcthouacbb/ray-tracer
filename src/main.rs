@@ -1,5 +1,6 @@
 mod math;
 mod tracer;
+mod transform;
 
 use std::{fs::File, time::Instant};
 
@@ -11,6 +12,7 @@ use crate::{
         aabb::AABB, camera::Camera, hittable::Hittable, material::Material,
         primitives::triangle::Triangle, render::render_image,
     },
+    transform::Transform,
 };
 
 fn load_obj_model(file_name: &str, material: &Material, objects: &mut Vec<Box<dyn Hittable>>) {
@@ -78,7 +80,7 @@ fn main() {
     let look_at = Vec3::new(0.0, 0.1, 0.0);
     let look_up = Vec3::new(0.0, 1.0, 0.0);
 
-    let camera_mat = Mat4::look_at(&look_from, &look_at, &look_up);
+    let camera_transform = Transform::look_at(&look_from, &look_at, &look_up);
 
     let camera = Camera::new(
         WIDTH as f32 / HEIGHT as f32,
@@ -93,7 +95,15 @@ fn main() {
 
     let mut image = RgbImage::new(WIDTH, HEIGHT);
     let t1 = Instant::now();
-    render_image(&mut image, &camera, &camera_mat, &objects, SPP, 25, THREADS);
+    render_image(
+        &mut image,
+        &camera,
+        &camera_transform,
+        &objects,
+        SPP,
+        25,
+        THREADS,
+    );
     let t2 = Instant::now();
 
     let time = t2 - t1;

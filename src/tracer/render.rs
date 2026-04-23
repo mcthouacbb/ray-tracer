@@ -20,6 +20,7 @@ use crate::{
         hittable::Hittable,
         ray::{Ray, RayHit},
     },
+    transform::{self, Transform},
 };
 
 pub fn sky_color(ray: &Ray) -> Vec3 {
@@ -69,7 +70,7 @@ pub fn ray_color(
 pub fn render_image(
     image: &mut RgbImage,
     camera: &Camera,
-    camera_mat: &Mat4,
+    camera_transform: &Transform,
     objects: &[Box<dyn Hittable>],
     spp: u32,
     max_depth: u32,
@@ -123,6 +124,7 @@ pub fn render_image(
                                     / height as f32;
 
                                 let camera_ray = camera.get_ray_dir(u, v, &mut rng);
+                                let camera_mat = camera_transform.transform();
                                 let ray = Ray::new(
                                     camera_mat.transform_pos(&camera_ray.origin()),
                                     camera_mat.transform_dir(&camera_ray.dir()),

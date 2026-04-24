@@ -2,9 +2,9 @@ use crate::{
     math::Vec3,
     tracer::{
         aabb::AABB,
-        hittable::Hittable,
-        material::Material,
+        primitives::Primitive,
         ray::{Ray, RayHit},
+        scene::InstanceId,
     },
 };
 
@@ -12,16 +12,11 @@ use crate::{
 pub struct Sphere {
     center: Vec3,
     radius: f32,
-    material: Material,
 }
 
 impl Sphere {
-    pub fn new(center: Vec3, radius: f32, material: &Material) -> Self {
-        Self {
-            center,
-            radius,
-            material: *material,
-        }
+    pub fn new(center: Vec3, radius: f32) -> Self {
+        Self { center, radius }
     }
 
     pub fn center(&self) -> Vec3 {
@@ -33,8 +28,8 @@ impl Sphere {
     }
 }
 
-impl Hittable for Sphere {
-    fn trace(&self, ray: &Ray) -> RayHit {
+impl Primitive for Sphere {
+    fn hit(&self, ray: &Ray, instance_id: InstanceId, primitive_id: u32) -> RayHit {
         let oc = self.center() - ray.origin();
         let a = ray.dir().dot(&ray.dir());
         let b = -2.0 * ray.dir().dot(&oc);
@@ -51,8 +46,8 @@ impl Hittable for Sphere {
             } else {
                 return RayHit::NONE;
             };
-            let pos = ray.origin() + ray.dir() * dist;
-            RayHit::new(dist, (pos - self.center()) / self.radius(), self.material)
+
+            RayHit::new(dist, instance_id, primitive_id /*, (0.0, 0.0)*/)
         } else {
             RayHit::NONE
         }
@@ -66,5 +61,10 @@ impl Hittable for Sphere {
         let min = self.center - Vec3::from_value(self.radius);
         let max = self.center + Vec3::from_value(self.radius);
         AABB::new(min, max)
+    }
+
+    fn get_normal(&self, ray: &Ray, t: f32) -> Vec3 {
+        let hit_pt = ray.origin() + ray.dir() * t;
+        (hit_pt - self.center) / self.radius
     }
 }

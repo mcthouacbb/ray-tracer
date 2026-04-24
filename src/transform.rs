@@ -65,4 +65,14 @@ impl Transform {
             * Mat4::rotate(&self.rotation).transpose()
             * Mat4::translate(&-self.position)
     }
+
+    pub fn normal_mat(&self) -> Mat4 {
+        Mat4::rotate(&self.rotation) * Mat4::scale(&self.scale.inverse())
+    }
+}
+
+impl Default for Transform {
+    fn default() -> Self {
+        Self::new(&Vec3::ZERO, &Quat::IDENTITY, &Vec3::from_value(1.0))
+    }
 }

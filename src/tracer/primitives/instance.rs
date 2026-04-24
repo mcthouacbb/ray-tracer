@@ -1,43 +1,44 @@
+use std::ops::Deref;
+
 use crate::{
     math::{Mat4, Vec3},
     tracer::{
         aabb::AABB,
         hittable::Hittable,
         material::Material,
+        primitives::Primitive,
         ray::{Ray, RayHit},
-        scene::{InstanceId, MeshId, Scene},
+        scene::{InstanceId, Scene},
     },
     transform::Transform,
 };
 
-pub struct BLASInstance {
-    blas_id: MeshId,
+pub struct PrimitiveInstance {
+    primitive: Box<dyn Primitive>,
     transform: Transform,
     aabb: AABB,
     transform_inv: Mat4,
     material: Material,
 }
 
-impl BLASInstance {
-    pub fn new(blas_id: MeshId, scene: &Scene, transform: Transform, material: Material) -> Self {
-        let blas = scene.get_blas(blas_id);
-
+impl PrimitiveInstance {
+    pub fn new(primitive: Box<dyn Primitive>, transform: Transform, material: Material) -> Self {
         let mut aabb = AABB::NEG_INF;
         for corner_idx in 0..8 {
             let x = if corner_idx & 1 > 0 {
-                blas.bounding_box().min().x()
+                primitive.bounding_box().min().x()
             } else {
-                blas.bounding_box().max().x()
+                primitive.bounding_box().max().x()
             };
             let y = if corner_idx & 2 > 0 {
-                blas.bounding_box().min().y()
+                primitive.bounding_box().min().y()
             } else {
-                blas.bounding_box().max().y()
+                primitive.bounding_box().max().y()
             };
             let z = if corner_idx & 4 > 0 {
-                blas.bounding_box().min().z()
+                primitive.bounding_box().min().z()
             } else {
-                blas.bounding_box().max().z()
+                primitive.bounding_box().max().z()
             };
 
             let old_corner = Vec3::new(x, y, z);
@@ -46,7 +47,7 @@ impl BLASInstance {
         }
 
         Self {
-            blas_id,
+            primitive,
             transform,
             aabb,
             transform_inv: transform.transform_inv(),
@@ -61,8 +62,8 @@ impl BLASInstance {
         )
     }
 
-    pub fn mesh_id(&self) -> MeshId {
-        self.blas_id
+    pub fn primitive(&self) -> &dyn Primitive {
+        self.primitive.deref()
     }
 
     pub fn transform(&self) -> &Transform {
@@ -74,14 +75,10 @@ impl BLASInstance {
     }
 }
 
-impl Hittable for BLASInstance {
-    fn trace(&self, ray: &Ray, ray_hit: &mut RayHit, instance_id: InstanceId, scene: &Scene) {
-        scene.get_blas(self.blas_id).traverse(
-            &self.transform_ray(ray),
-            ray_hit,
-            instance_id,
-            scene.get_mesh(self.blas_id).primitives(),
-        );
+impl Hittable for PrimitiveInstance {
+    fn trace(&self, ray: &Ray, ray_hit: &mut RayHit, instance_id: InstanceId, _scene: &Scene) {
+        let hit = self.primitive.hit(&self.transform_ray(ray), instance_id, 0);
+        ray_hit.replace_if_closer(&hit);
     }
 
     fn center(&self) -> Vec3 {

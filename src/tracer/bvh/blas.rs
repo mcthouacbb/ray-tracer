@@ -7,8 +7,9 @@ use std::{
 
 use crate::tracer::{
     aabb::AABB,
-    hittable::Hittable,
+    primitives::Primitive,
     ray::{Ray, RayHit},
+    scene::InstanceId,
 };
 
 #[derive(Debug, Clone)]
@@ -42,7 +43,7 @@ pub struct BLAS {
 impl BLAS {
     const NUM_BINS: usize = 16;
 
-    pub fn create(primitives: &[Box<dyn Hittable>]) -> Self {
+    pub fn create(primitives: &[Box<dyn Primitive>]) -> Self {
         assert!(primitives.len() > 0);
 
         let mut result = Self {
@@ -70,9 +71,15 @@ impl BLAS {
         self.nodes[0].aabb
     }
 
-    pub fn traverse(&self, ray: &Ray, ray_hit: &mut RayHit, primitives: &[Box<dyn Hittable>]) {
+    pub fn traverse(
+        &self,
+        ray: &Ray,
+        ray_hit: &mut RayHit,
+        instance_id: InstanceId,
+        primitives: &[Box<dyn Primitive>],
+    ) {
         if self.nodes[0].aabb.hit(ray) < f32::INFINITY {
-            self.traverse_impl(0, ray, ray_hit, primitives);
+            self.traverse_impl(0, ray, ray_hit, instance_id, primitives);
         }
     }
 
@@ -81,12 +88,14 @@ impl BLAS {
         node_idx: usize,
         ray: &Ray,
         ray_hit: &mut RayHit,
-        primitives: &[Box<dyn Hittable>],
+        instance_id: InstanceId,
+        primitives: &[Box<dyn Primitive>],
     ) {
         let node = &self.nodes[node_idx];
         if node.is_leaf() {
             for i in node.primitives() {
-                let hit = primitives[self.primitive_indices[i] as usize].trace(ray);
+                let prim_id = self.primitive_indices[i];
+                let hit = primitives[prim_id as usize].hit(ray, instance_id, prim_id);
                 ray_hit.replace_if_closer(&hit);
             }
         } else {
@@ -99,15 +108,15 @@ impl BLAS {
             }
 
             if close_dist < f32::INFINITY && close_dist < ray_hit.dist() {
-                self.traverse_impl(close_idx, ray, ray_hit, primitives);
+                self.traverse_impl(close_idx, ray, ray_hit, instance_id, primitives);
                 if far_dist < f32::INFINITY && far_dist < ray_hit.dist() {
-                    self.traverse_impl(far_idx, ray, ray_hit, primitives);
+                    self.traverse_impl(far_idx, ray, ray_hit, instance_id, primitives);
                 }
             }
         }
     }
 
-    fn calc_node_bounds(&mut self, node_idx: usize, primitives: &[Box<dyn Hittable>]) {
+    fn calc_node_bounds(&mut self, node_idx: usize, primitives: &[Box<dyn Primitive>]) {
         let node = &mut self.nodes[node_idx];
         node.aabb = AABB::NEG_INF;
         for i in node.primitives() {
@@ -119,7 +128,7 @@ impl BLAS {
     fn find_split_plane(
         &self,
         node_idx: usize,
-        primitives: &[Box<dyn Hittable>],
+        primitives: &[Box<dyn Primitive>],
     ) -> (usize, usize, f32) {
         let node = &self.nodes[node_idx];
         let mut best_sah = f32::INFINITY;
@@ -181,7 +190,7 @@ impl BLAS {
         node_idx: usize,
         split_axis: usize,
         split_pos: usize,
-        primitives: &[Box<dyn Hittable>],
+        primitives: &[Box<dyn Primitive>],
     ) -> u32 {
         let mut i = self.nodes[node_idx].left as usize;
         let mut j = self.nodes[node_idx].right as usize - 1;
@@ -215,7 +224,7 @@ impl BLAS {
         }
     }
 
-    fn build_bvh(&mut self, node_idx: usize, primitives: &[Box<dyn Hittable>]) {
+    fn build_bvh(&mut self, node_idx: usize, primitives: &[Box<dyn Primitive>]) {
         let (split_axis, split_pos, split_sah) = self.find_split_plane(node_idx, primitives);
         let curr_sah = self.nodes[node_idx].aabb.surface_area()
             * self.nodes[node_idx].primitives().len() as f32;

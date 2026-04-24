@@ -2,23 +2,21 @@ use crate::{
     math::Vec3,
     tracer::{
         aabb::AABB,
-        hittable::Hittable,
-        material::Material,
+        primitives::Primitive,
         ray::{Ray, RayHit},
+        scene::InstanceId,
     },
 };
 
 #[derive(Debug, Clone, Copy)]
 pub struct Triangle {
     vertices: [Vec3; 3],
-    material: Material,
 }
 
 impl Triangle {
-    pub fn new(a: Vec3, b: Vec3, c: Vec3, material: &Material) -> Self {
+    pub fn new(a: Vec3, b: Vec3, c: Vec3) -> Self {
         Self {
             vertices: [a, b, c],
-            material: *material,
         }
     }
 
@@ -33,8 +31,8 @@ impl Triangle {
     }
 }
 
-impl Hittable for Triangle {
-    fn trace(&self, ray: &Ray) -> RayHit {
+impl Primitive for Triangle {
+    fn hit(&self, ray: &Ray, instance_id: InstanceId, primitive_id: u32) -> RayHit {
         let edge1 = self.vertices[1] - self.vertices[0];
         let edge2 = self.vertices[2] - self.vertices[0];
         let h = ray.dir().cross(&edge2);
@@ -59,7 +57,7 @@ impl Hittable for Triangle {
         let t = f * edge2.dot(&q);
 
         if t > 0.0 {
-            RayHit::new(t, self.flat_normal(), self.material)
+            RayHit::new(t, instance_id, primitive_id /*, (u, v)*/)
         } else {
             RayHit::NONE
         }
@@ -74,5 +72,9 @@ impl Hittable for Triangle {
         aabb.add_point(self.vertices[1]);
         aabb.add_point(self.vertices[2]);
         aabb
+    }
+
+    fn get_normal(&self, _ray: &Ray, _t: f32) -> Vec3 {
+        self.flat_normal()
     }
 }

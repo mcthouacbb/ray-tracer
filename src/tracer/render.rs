@@ -36,17 +36,21 @@ pub fn ray_color(ray: &Ray, scene: &Scene, rng: &mut impl RngExt, depth: u32) ->
         return Vec3::ZERO;
     }
 
-    let ray_hit = scene.trace(ray);
+    let (ray_hit, scene_hit) = scene.trace(ray);
 
     if ray_hit.dist() < f32::INFINITY {
-        let scatter_color = match ray_hit.material().scatter(&ray, &ray_hit, rng) {
+        let scene_hit = scene_hit.unwrap();
+        let scatter_color = match scene_hit
+            .material()
+            .scatter(&ray, &ray_hit, &scene_hit, rng)
+        {
             Some(scatter_result) => {
                 let sub_color = ray_color(scatter_result.scattered_ray(), scene, rng, depth - 1);
                 scatter_result.attenuation().pairwise(&sub_color)
             }
             None => Vec3::ZERO,
         };
-        let emissive_color = ray_hit.material().emitted();
+        let emissive_color = scene_hit.material().emitted();
         emissive_color + scatter_color
     } else {
         0.35 * sky_color(&ray)

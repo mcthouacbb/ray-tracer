@@ -7,7 +7,7 @@ use std::{
 
 use crate::tracer::{
     aabb::AABB,
-    bvh::bvh_utils::partition,
+    bvh::bvh_utils::{binned_sah, partition},
     primitives::Primitive,
     ray::{Ray, RayHit},
     scene::InstanceId,
@@ -136,50 +136,25 @@ impl BLAS {
         let mut best_axis = 0;
         let mut best_split_pos = 0;
         for axis in 0..3 {
-            let mut bins = [(AABB::NEG_INF, 0u32); Self::NUM_BINS];
             let bin_start = node.aabb.min()[axis];
             let bin_size = node.aabb.extent()[axis] / Self::NUM_BINS as f32;
 
-            for i in node.primitives() {
-                let primitive = primitives[self.primitive_indices[i] as usize].deref();
-                let pos = primitive.center()[axis];
-                let bin = ((pos - bin_start) / bin_size) as usize;
-                bins[bin.min(Self::NUM_BINS - 1)]
-                    .0
-                    .expand(&primitive.bounding_box());
+            let (sah, split_pos) = binned_sah::<{ Self::NUM_BINS }, _, _>(
+                &self.primitive_indices[node.primitives()],
+                |&i| {
+                    let primitive = primitives[i as usize].deref();
+                    (
+                        primitive.bounding_box(),
+                        (((primitive.center()[axis] - bin_start) / bin_size) as usize)
+                            .min(Self::NUM_BINS - 1),
+                    )
+                },
+            );
 
-                bins[bin.min(Self::NUM_BINS - 1)].1 += 1;
-            }
-
-            let mut right_bins = [(AABB::NEG_INF, 0u32); Self::NUM_BINS - 1];
-            for i in (0..Self::NUM_BINS - 1).rev() {
-                if i < Self::NUM_BINS - 2 {
-                    right_bins[i] = right_bins[i + 1];
-                }
-
-                right_bins[i].0.expand(&bins[i + 1].0);
-                right_bins[i].1 += bins[i + 1].1;
-            }
-
-            let mut left_aabb = bins[0].0;
-            let mut left_count = bins[0].1;
-            for i in 1..Self::NUM_BINS {
-                let right_aabb = right_bins[i - 1].0;
-                let right_count = right_bins[i - 1].1;
-
-                if right_count > 0 && left_count > 0 {
-                    let sah = left_aabb.surface_area() * left_count as f32
-                        + right_aabb.surface_area() * right_count as f32;
-
-                    if sah < best_sah {
-                        best_sah = sah;
-                        best_axis = axis;
-                        best_split_pos = i;
-                    }
-                }
-
-                left_aabb.expand(&bins[i].0);
-                left_count += bins[i].1;
+            if sah < best_sah {
+                best_sah = sah;
+                best_axis = axis;
+                best_split_pos = split_pos;
             }
         }
 
@@ -197,8 +172,8 @@ impl BLAS {
         let bin_size = self.nodes[node_idx].aabb.extent()[split_axis] / Self::NUM_BINS as f32;
         partition(
             &mut self.primitive_indices[self.nodes[node_idx].primitives()],
-            |&x| {
-                (((primitives[x as usize].center()[split_axis] - bin_start) / bin_size) as usize)
+            |&i| {
+                (((primitives[i as usize].center()[split_axis] - bin_start) / bin_size) as usize)
                     < split_pos
             },
         ) as u32

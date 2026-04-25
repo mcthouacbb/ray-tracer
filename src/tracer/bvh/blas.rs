@@ -7,6 +7,7 @@ use std::{
 
 use crate::tracer::{
     aabb::AABB,
+    bvh::bvh_utils::partition,
     primitives::Primitive,
     ray::{Ray, RayHit},
     scene::InstanceId,
@@ -192,36 +193,16 @@ impl BLAS {
         split_pos: usize,
         primitives: &[Box<dyn Primitive>],
     ) -> u32 {
-        let mut i = self.nodes[node_idx].left as usize;
-        let mut j = self.nodes[node_idx].right as usize - 1;
         let bin_start = self.nodes[node_idx].aabb.min()[split_axis];
         let bin_size = self.nodes[node_idx].aabb.extent()[split_axis] / Self::NUM_BINS as f32;
-        loop {
-            while i < j
-                && (((primitives[self.primitive_indices[i] as usize].center()[split_axis]
-                    - bin_start)
-                    / bin_size) as usize)
+        partition(
+            &mut self.primitive_indices[self.nodes[node_idx].primitives()],
+            |&x| {
+                (((primitives[x as usize].center()[split_axis] - bin_start) / bin_size) as usize)
                     < split_pos
-            {
-                i += 1;
-            }
-
-            while i < j
-                && (((primitives[self.primitive_indices[j] as usize].center()[split_axis]
-                    - bin_start)
-                    / bin_size) as usize)
-                    >= split_pos
-            {
-                j -= 1;
-            }
-
-            if i >= j {
-                return i as u32;
-            }
-
-            let (left_slice, right_slice) = self.primitive_indices.split_at_mut(j);
-            mem::swap(&mut left_slice[i], &mut right_slice[0]);
-        }
+            },
+        ) as u32
+            + self.nodes[node_idx].left
     }
 
     fn build_bvh(&mut self, node_idx: usize, primitives: &[Box<dyn Primitive>]) {

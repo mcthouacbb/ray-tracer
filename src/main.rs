@@ -84,7 +84,7 @@ fn main() {
     let camera = Camera::new(
         WIDTH as f32 / HEIGHT as f32,
         20.0f32.to_radians(),
-        16.0,
+        10.0,
         0.6f32.to_radians(),
     );
 
@@ -102,7 +102,7 @@ fn main() {
             &Vec3::new(0.0, 1.0, 0.0),
             &Vec3::from_value(1.5),
         ),
-        Material::new_emissive(Vec3::new(0.404, 0.902, 0.388)),
+        Material::new_emissive(Vec3::new(0.902, 0.554, 0.388)),
     );
     scene.add_blas_instance(
         villager_id,

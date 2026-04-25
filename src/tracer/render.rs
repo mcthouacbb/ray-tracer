@@ -53,7 +53,7 @@ pub fn ray_color(ray: &Ray, scene: &Scene, rng: &mut impl RngExt, depth: u32) ->
         let emissive_color = scene_hit.material().emitted();
         emissive_color + scatter_color
     } else {
-        0.35 * sky_color(&ray)
+        0.15 * sky_color(&ray)
     }
 }
 

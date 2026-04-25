@@ -5,8 +5,8 @@ use crate::{
     tracer::{
         bvh::{blas::BLAS, blas_instance::BLASInstance},
         hittable::Hittable,
-        material::{self, Material},
-        primitives::{Primitive, instance::PrimitiveInstance},
+        material::Material,
+        primitives::Primitive,
         ray::{Ray, RayHit},
     },
     transform::Transform,
@@ -26,23 +26,41 @@ impl SubObject {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
-pub struct MeshId(u32);
+struct GlobalObjects {
+    primitives: Vec<Box<dyn Primitive>>,
+    materials: Vec<Material>,
+}
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum InstanceKind {
-    Blas,
-    Primitive,
+impl GlobalObjects {
+    fn new() -> Self {
+        Self {
+            primitives: Vec::new(),
+            materials: Vec::new(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
-pub struct InstanceId(InstanceKind, u32);
+pub struct MeshId(u32);
+
+#[derive(Debug, Clone, Copy)]
+pub struct InstanceId(u32);
 
 impl InstanceId {
-    pub const NONE: Self = Self(InstanceKind::Blas, u32::MAX);
+    pub const GLOBAL: Self = Self(0);
 
-    fn kind(&self) -> InstanceKind {
-        self.0
+    fn new(id: u32) -> Self {
+        assert!(id != u32::MAX);
+        Self(id ^ u32::MAX)
+    }
+
+    fn is_global(&self) -> bool {
+        self.0 == 0
+    }
+
+    fn get_id(&self) -> u32 {
+        assert!(!self.is_global());
+        self.0 ^ u32::MAX
     }
 }
 
@@ -83,23 +101,24 @@ impl SceneHit {
 }
 
 pub struct Scene {
+    global: GlobalObjects,
     meshes: Vec<SubObject>,
     blas_list: Vec<BLAS>,
     blas_instances: Vec<BLASInstance>,
-    primitive_instances: Vec<PrimitiveInstance>,
 
+    global_blas: Option<BLAS>,
     // TODO: make this a real TLAS
-    tlas: Option<BLAS>,
+    // tlas: Option<BLAS>,
 }
 
 impl Scene {
     pub fn new() -> Self {
         Self {
+            global: GlobalObjects::new(),
             meshes: Vec::new(),
             blas_list: Vec::new(),
             blas_instances: Vec::new(),
-            primitive_instances: Vec::new(),
-            tlas: None,
+            global_blas: None, // tlas: None,
         }
     }
 
@@ -121,22 +140,22 @@ impl Scene {
         let id = self.blas_instances.len() as u32;
         self.blas_instances
             .push(BLASInstance::new(mesh_id, self, transform, material));
-        InstanceId(InstanceKind::Blas, id)
+        InstanceId::new(id)
     }
 
-    pub fn add_primitive_instance(
+    pub fn add_global_primitive(
         &mut self,
         primitive: Box<dyn Primitive>,
-        transform: Transform,
         material: Material,
-    ) -> InstanceId {
-        let id = self.primitive_instances.len() as u32;
-        self.primitive_instances
-            .push(PrimitiveInstance::new(primitive, transform, material));
-        InstanceId(InstanceKind::Primitive, id)
+    ) -> u32 {
+        let id = self.global.primitives.len() as u32;
+        self.global.primitives.push(primitive);
+        self.global.materials.push(material);
+        id
     }
 
     pub fn finalize(&mut self) {
+        self.global_blas = Some(BLAS::create(&self.global.primitives));
         /*if self.global.primitives().len() > 0 {
             self.tlas = Some(BLAS::create(self.global.primitives()));
         }*/
@@ -151,71 +170,49 @@ impl Scene {
     }
 
     pub fn get_blas_instance(&self, instance_id: InstanceId) -> &BLASInstance {
-        assert!(instance_id.0 == InstanceKind::Blas);
-        &self.blas_instances[instance_id.1 as usize]
+        &self.blas_instances[instance_id.get_id() as usize]
     }
 
-    pub fn get_primitive_instance(&self, instance_id: InstanceId) -> &PrimitiveInstance {
-        assert!(instance_id.0 == InstanceKind::Primitive);
-        &self.primitive_instances[instance_id.1 as usize]
+    pub fn get_global_primitive(&self, id: u32) -> &dyn Primitive {
+        self.global.primitives[id as usize].deref()
     }
 
     pub fn get_scene_hit(&self, ray: &Ray, ray_hit: &RayHit) -> SceneHit {
         let instance_id = ray_hit.instance_id();
-        match instance_id.kind() {
-            InstanceKind::Blas => {
-                let instance = self.get_blas_instance(instance_id);
-                let inst_ray = instance.transform_ray(ray);
-
-                let primitive = self.get_mesh(instance.mesh_id()).primitives
-                    [ray_hit.primitive_id() as usize]
-                    .deref();
-                let raw_normal = primitive.get_normal(&inst_ray, ray_hit.dist());
-                let normal = instance
-                    .transform()
-                    .normal_mat()
-                    .transform_dir(&raw_normal)
-                    .normalized();
-                SceneHit::new(ray, normal, *instance.material())
-            }
-            InstanceKind::Primitive => {
-                let instance = self.get_primitive_instance(instance_id);
-                let inst_ray = instance.transform_ray(ray);
-                let raw_normal = instance.primitive().get_normal(&inst_ray, ray_hit.dist());
-                let normal = instance
-                    .transform()
-                    .normal_mat()
-                    .transform_dir(&raw_normal)
-                    .normalized();
-
-                SceneHit::new(ray, normal, *instance.material())
-            }
+        if instance_id.is_global() {
+            let primitive = self.get_global_primitive(ray_hit.primitive_id());
+            SceneHit::new(
+                ray,
+                primitive.get_normal(ray, ray_hit.dist()),
+                self.global.materials[ray_hit.primitive_id() as usize],
+            )
+        } else {
+            let instance = self.get_blas_instance(instance_id);
+            let primitive = self.get_mesh(instance.mesh_id()).primitives
+                [ray_hit.primitive_id() as usize]
+                .deref();
+            let raw_normal = primitive.get_normal(ray, ray_hit.dist());
+            let normal = instance
+                .transform()
+                .normal_mat()
+                .transform_dir(&raw_normal)
+                .normalized();
+            SceneHit::new(ray, normal, *instance.material())
         }
     }
 
     pub fn trace(&self, ray: &Ray) -> (RayHit, Option<SceneHit>) {
         let mut ray_hit = RayHit::NONE;
 
-        /*if let Some(tlas) = self.tlas.as_ref() {
-            tlas.traverse(ray, &mut ray_hit, self.global.primitives());
-        }*/
+        self.global_blas.as_ref().unwrap().traverse(
+            ray,
+            &mut ray_hit,
+            InstanceId::GLOBAL,
+            &self.global.primitives,
+        );
 
         for (idx, instance) in self.blas_instances.iter().enumerate() {
-            instance.trace(
-                ray,
-                &mut ray_hit,
-                InstanceId(InstanceKind::Blas, idx as u32),
-                self,
-            );
-        }
-
-        for (idx, instance) in self.primitive_instances.iter().enumerate() {
-            instance.trace(
-                ray,
-                &mut ray_hit,
-                InstanceId(InstanceKind::Primitive, idx as u32),
-                self,
-            );
+            instance.trace(ray, &mut ray_hit, InstanceId::new(idx as u32), self);
         }
 
         if ray_hit.dist() < f32::INFINITY {

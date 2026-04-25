@@ -1,7 +1,4 @@
-use crate::{
-    math::Vec3,
-    tracer::{material::Material, scene::InstanceId},
-};
+use crate::{math::Vec3, tracer::scene::InstanceId};
 
 #[derive(Debug, Clone, Copy)]
 pub struct Ray {
@@ -34,7 +31,7 @@ pub struct RayHit {
 impl RayHit {
     pub const NONE: Self = Self {
         dist: f32::INFINITY,
-        instance_id: InstanceId::NONE,
+        instance_id: InstanceId::GLOBAL,
         primitive_id: 0,
     };
 

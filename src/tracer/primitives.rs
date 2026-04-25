@@ -7,7 +7,6 @@ use crate::{
     },
 };
 
-pub mod instance;
 pub mod sphere;
 pub mod triangle;
 

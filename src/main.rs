@@ -8,7 +8,7 @@ use image::{ImageFormat, RgbImage};
 use rand::{RngExt, SeedableRng, rngs::Xoshiro256PlusPlus};
 
 use crate::{
-    math::{Mat4, Quat, Vec3},
+    math::Vec3,
     tracer::{
         aabb::AABB,
         camera::Camera,
@@ -72,7 +72,7 @@ fn load_obj_model(file_name: &str, objects: &mut Vec<Box<dyn Primitive>>) {
 fn main() {
     const WIDTH: u32 = 1200;
     const HEIGHT: u32 = 500;
-    const SPP: u32 = 50;
+    const SPP: u32 = 500;
     const THREADS: u32 = 8;
 
     let look_from = Vec3::new(13.0, 2.0, 3.0);
@@ -91,7 +91,6 @@ fn main() {
     let mut scene = Scene::new();
 
     let mut objects = Vec::<Box<dyn Primitive>>::new();
-    let material = Material::new_lambertian(Vec3::new(0.404, 0.902, 0.388));
     load_obj_model("res/villager.obj", &mut objects);
     let villager_id = scene.add_mesh(SubObject::new(objects));
 
@@ -103,29 +102,28 @@ fn main() {
             &Vec3::new(0.0, 1.0, 0.0),
             &Vec3::from_value(1.5),
         ),
-        material,
+        Material::new_emissive(Vec3::new(0.404, 0.902, 0.388)),
     );
     scene.add_blas_instance(
         villager_id,
         Transform::look_at_scale(
             &Vec3::new(-7.0, 1.0, 2.0),
-            &(Vec3::new(-7.0, 2.0, 2.0) - Vec3::new(13.0, 2.0, 3.0)),
+            &(Vec3::new(-7.0, 1.0, 2.0) - Vec3::new(13.0, 2.0, 3.0)),
             &Vec3::new(0.0, 1.0, 0.0),
             &Vec3::from_value(1.5),
         ),
-        material,
+        Material::new_metal(Vec3::new(0.404, 0.902, 0.388), 0.3),
     );
 
     let ground_material = Material::new_lambertian(Vec3::new(0.5, 0.5, 0.5));
-    scene.add_primitive_instance(
+    scene.add_global_primitive(
         Box::new(Sphere::new(Vec3::new(0.0, -1000.0, 0.0), 1000.0)),
-        Transform::default(),
         ground_material,
     );
 
     let mut rng = Xoshiro256PlusPlus::seed_from_u64(283748328);
 
-    /*for a in -11..11 {
+    for a in -11..11 {
         for b in -11..11 {
             let center = Vec3::new(
                 a as f32 + rng.random_range(0.0..0.9),
@@ -139,53 +137,34 @@ fn main() {
                     let albedo = Vec3::random_range(0.0, 1.0, &mut rng)
                         .pairwise(&Vec3::random_range(0.0, 1.0, &mut rng));
                     let lambertian = Material::new_lambertian(albedo);
-                    scene.add_primitive_instance(
-                        Box::new(Sphere::new(center, 0.2)),
-                        Transform::default(),
-                        lambertian,
-                    );
+                    scene.add_global_primitive(Box::new(Sphere::new(center, 0.2)), lambertian);
                 } else if choose_mat < 0.8 {
                     let color = Vec3::random_range(0.5, 1.0, &mut rng);
                     let emissive = Material::new_emissive(color);
-                    scene.add_primitive_instance(
-                        Box::new(Sphere::new(center, 0.2)),
-                        Transform::default(),
-                        emissive,
-                    );
+                    scene.add_global_primitive(Box::new(Sphere::new(center, 0.2)), emissive);
                 } else if choose_mat < 0.95 {
                     let albedo = Vec3::random_range(0.5, 1.0, &mut rng);
                     let fuzz = rng.random_range(0.0..=0.5);
                     let metal = Material::new_metal(albedo, fuzz);
-                    scene.add_primitive_instance(
-                        Box::new(Sphere::new(center, 0.2)),
-                        Transform::default(),
-                        metal,
-                    );
+                    scene.add_global_primitive(Box::new(Sphere::new(center, 0.2)), metal);
                 } else {
                     let dielectric = Material::new_dielectric(1.5);
-                    scene.add_primitive_instance(
-                        Box::new(Sphere::new(center, 0.2)),
-                        Transform::default(),
-                        dielectric,
-                    );
+                    scene.add_global_primitive(Box::new(Sphere::new(center, 0.2)), dielectric);
                 }
             }
         }
-    }*/
+    }
 
-    scene.add_primitive_instance(
+    scene.add_global_primitive(
         Box::new(Sphere::new(Vec3::new(0.0, 1.0, 0.0), 1.0)),
-        Transform::default(),
         Material::new_dielectric(1.5),
     );
-    scene.add_primitive_instance(
+    scene.add_global_primitive(
         Box::new(Sphere::new(Vec3::new(-4.0, 1.0, 0.0), 1.0)),
-        Transform::default(),
         Material::new_lambertian(Vec3::new(0.4, 0.2, 0.1)),
     );
-    scene.add_primitive_instance(
+    scene.add_global_primitive(
         Box::new(Sphere::new(Vec3::new(4.0, 1.0, 0.0), 1.0)),
-        Transform::default(),
         Material::new_metal(Vec3::new(0.7, 0.6, 0.5), 0.0),
     );
 

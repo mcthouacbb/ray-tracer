@@ -1,6 +1,29 @@
-use std::mem;
+use std::{mem, ops::Range};
 
 use crate::tracer::aabb::AABB;
+
+#[derive(Debug, Clone)]
+pub(in crate::tracer::bvh) struct BVHNode {
+    pub aabb: AABB,
+    pub left: u32,
+    pub right: u32,
+}
+
+impl BVHNode {
+    pub fn is_leaf(&self) -> bool {
+        self.right != u32::MAX
+    }
+
+    pub fn indices(&self) -> Range<usize> {
+        assert!(self.is_leaf());
+        self.left as usize..self.right as usize
+    }
+
+    pub fn left_right_idx(&self) -> (usize, usize) {
+        assert!(!self.is_leaf());
+        (self.left as usize, self.left as usize + 1)
+    }
+}
 
 pub fn binned_sah<const NUM_BINS: usize, T, F: Fn(&T) -> (AABB, usize)>(
     slice: &[T],

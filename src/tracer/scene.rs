@@ -1,8 +1,7 @@
 use crate::{
     math::Vec3,
     tracer::{
-        bvh::{blas::BLAS, blas_instance::BLASInstance},
-        hittable::Hittable,
+        bvh::{blas::BLAS, blas_instance::BLASInstance, tlas::TLAS},
         material::Material,
         primitives::{Primitive, sphere::Sphere, triangle::Triangle},
         ray::{Ray, RayHit},
@@ -76,8 +75,7 @@ pub struct Scene {
     spheres: (SubObject<Sphere>, Vec<Material>, Option<BLAS>),
     meshes: Vec<(SubObject<Triangle>, BLAS)>,
     blas_instances: Vec<BLASInstance>,
-    // TODO: make this a real TLAS
-    // tlas: Option<BLAS>,
+    tlas: Option<TLAS>,
 }
 
 impl Scene {
@@ -86,6 +84,7 @@ impl Scene {
             spheres: (SubObject::new(Vec::new()), Vec::new(), None),
             meshes: Vec::new(),
             blas_instances: Vec::new(),
+            tlas: None,
         }
     }
 
@@ -119,9 +118,7 @@ impl Scene {
 
     pub fn finalize(&mut self) {
         self.spheres.2 = Some(BLAS::create(&self.spheres.0));
-        /*if self.global.primitives().len() > 0 {
-            self.tlas = Some(BLAS::create(self.global.primitives()));
-        }*/
+        self.tlas = Some(TLAS::create(self));
     }
 
     pub fn get_mesh(&self, mesh_id: MeshId) -> &SubObject<Triangle> {
@@ -180,14 +177,23 @@ impl Scene {
             &self.spheres.0,
         );
 
-        for (idx, instance) in self.blas_instances.iter().enumerate() {
-            instance.trace(ray, &mut ray_hit, InstanceId::Mesh(idx as u32), self);
-        }
+        self.tlas
+            .as_ref()
+            .unwrap()
+            .traverse(ray, &mut ray_hit, self);
 
         if ray_hit.dist() < f32::INFINITY {
             (ray_hit, Some(self.get_scene_hit(ray, &ray_hit)))
         } else {
             (ray_hit, None)
         }
+    }
+
+    pub fn get_instance_ids(&self) -> Vec<InstanceId> {
+        let mut result = Vec::with_capacity(self.blas_instances.len());
+        for i in 0..self.blas_instances.len() {
+            result.push(InstanceId::Mesh(i as u32));
+        }
+        result
     }
 }

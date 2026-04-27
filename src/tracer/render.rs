@@ -13,17 +13,13 @@ use indicatif::ProgressBar;
 use rand::{RngExt, SeedableRng, rngs::Xoshiro256PlusPlus};
 
 use crate::{
-    math::{Mat4, Vec3},
-    tracer::{
-        bvh::blas::BLAS,
-        camera::Camera,
-        hittable::Hittable,
-        ray::{Ray, RayHit},
-    },
+    math::Vec3,
+    tracer::{camera::Camera, ray::Ray, scene::Scene},
+    transform::Transform,
 };
 
 pub fn sky_color(ray: &Ray) -> Vec3 {
-    let a = 0.5 * ray.dir().y() + 0.5;
+    let a = 0.5 * ray.dir().normalized().y() + 0.5;
     (1.0 - a) * Vec3::new(1.0, 1.0, 1.0) + a * Vec3::new(0.5, 0.7, 1.0)
 }
 
@@ -35,42 +31,37 @@ pub fn linear_to_srgb(linear: f32) -> f32 {
     }
 }
 
-pub fn ray_color(
-    ray: &Ray,
-    bvh: &BLAS,
-    objects: &[Box<dyn Hittable>],
-    rng: &mut impl RngExt,
-    depth: u32,
-) -> Vec3 {
+pub fn ray_color(ray: &Ray, scene: &Scene, rng: &mut impl RngExt, depth: u32) -> Vec3 {
     if depth == 0 {
         return Vec3::ZERO;
     }
 
-    let mut ray_hit = RayHit::NONE;
-    bvh.traverse(ray, &mut ray_hit, objects);
+    let (ray_hit, scene_hit) = scene.trace(ray);
 
-    ray_hit.finalize(&ray);
     if ray_hit.dist() < f32::INFINITY {
-        let scatter_color = match ray_hit.material().scatter(&ray, &ray_hit, rng) {
+        let scene_hit = scene_hit.unwrap();
+        let scatter_color = match scene_hit
+            .material()
+            .scatter(&ray, &ray_hit, &scene_hit, rng)
+        {
             Some(scatter_result) => {
-                let sub_color =
-                    ray_color(scatter_result.scattered_ray(), bvh, objects, rng, depth - 1);
+                let sub_color = ray_color(scatter_result.scattered_ray(), scene, rng, depth - 1);
                 scatter_result.attenuation().pairwise(&sub_color)
             }
             None => Vec3::ZERO,
         };
-        let emissive_color = ray_hit.material().emitted();
+        let emissive_color = scene_hit.material().emitted();
         emissive_color + scatter_color
     } else {
-        0.35 * sky_color(&ray)
+        0.15 * sky_color(&ray)
     }
 }
 
 pub fn render_image(
     image: &mut RgbImage,
     camera: &Camera,
-    camera_mat: &Mat4,
-    objects: &[Box<dyn Hittable>],
+    camera_transform: &Transform,
+    scene: &Scene,
     spp: u32,
     max_depth: u32,
     num_threads: u32,
@@ -78,8 +69,6 @@ pub fn render_image(
     let width = image.width();
     let height = image.height();
     assert!(width % 4 == 0 && height % 4 == 0);
-
-    let bvh = BLAS::create(objects);
 
     let progress_bar = ProgressBar::new((width * height) as u64);
 
@@ -123,12 +112,13 @@ pub fn render_image(
                                     / height as f32;
 
                                 let camera_ray = camera.get_ray_dir(u, v, &mut rng);
+                                let camera_mat = camera_transform.transform();
                                 let ray = Ray::new(
                                     camera_mat.transform_pos(&camera_ray.origin()),
                                     camera_mat.transform_dir(&camera_ray.dir()),
                                 );
 
-                                let color = ray_color(&ray, &bvh, objects, &mut rng, max_depth);
+                                let color = ray_color(&ray, &scene, &mut rng, max_depth);
                                 accum_color += color;
                             }
 

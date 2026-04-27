@@ -1,4 +1,4 @@
-use crate::{math::Vec3, tracer::material::Material};
+use crate::{math::Vec3, tracer::scene::InstanceId};
 
 #[derive(Debug, Clone, Copy)]
 pub struct Ray {
@@ -23,28 +23,30 @@ impl Ray {
 #[derive(Debug, Clone, Copy)]
 pub struct RayHit {
     dist: f32,
-    normal: Vec3,
-    front_face: bool,
-    // TODO: could be a MaybeUninit?
-    material: Option<Material>,
+    instance_id: InstanceId,
+    primitive_id: u32,
+    // uv: (f32, f32),
 }
 
 impl RayHit {
     pub const NONE: Self = Self {
         dist: f32::INFINITY,
-        normal: Vec3::ZERO,
-        front_face: false,
-        material: None,
+        instance_id: InstanceId::GLOBAL,
+        primitive_id: 0,
     };
 
-    pub fn new(dist: f32, normal: Vec3, material: Material) -> Self {
+    pub fn new(
+        dist: f32,
+        instance_id: InstanceId,
+        primitive_id: u32, /*, uv: (f32, f32)*/
+    ) -> Self {
         assert!(dist < f32::INFINITY);
 
         Self {
             dist,
-            normal,
-            front_face: false,
-            material: Some(material),
+            instance_id,
+            primitive_id,
+            // uv,
         }
     }
 
@@ -54,35 +56,21 @@ impl RayHit {
         }
     }
 
-    pub fn finalize(&mut self, ray: &Ray) {
-        if self.dist == f32::INFINITY {
-            return;
-        }
-
-        if ray.dir().dot(&self.normal) > 0.0 {
-            self.normal = -self.normal;
-            self.front_face = false
-        } else {
-            self.front_face = true
-        }
-    }
-
     pub fn dist(&self) -> f32 {
         self.dist
     }
 
-    pub fn normal(&self) -> Vec3 {
+    pub fn instance_id(&self) -> InstanceId {
         assert!(self.dist < f32::INFINITY);
-        self.normal
+        self.instance_id
     }
 
-    pub fn front_face(&self) -> bool {
+    pub fn primitive_id(&self) -> u32 {
         assert!(self.dist < f32::INFINITY);
-        self.front_face
+        self.primitive_id
     }
 
-    pub fn material(&self) -> Material {
-        assert!(self.dist < f32::INFINITY);
-        self.material.unwrap()
-    }
+    /*pub fn uv(&self) -> (f32, f32) {
+        self.uv
+    }*/
 }

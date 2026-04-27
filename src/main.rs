@@ -1,5 +1,6 @@
 mod math;
 mod tracer;
+mod transform;
 
 use std::{fs::File, time::Instant};
 
@@ -7,12 +8,66 @@ use image::{ImageFormat, RgbImage};
 use rand::{RngExt, SeedableRng, rngs::Xoshiro256PlusPlus};
 
 use crate::{
-    math::{Mat4, Vec3},
+    math::Vec3,
     tracer::{
-        camera::Camera, hittable::Hittable, material::Material, render::render_image,
-        sphere::Sphere,
+        aabb::AABB,
+        camera::Camera,
+        material::Material,
+        primitives::{Primitive, sphere::Sphere, triangle::Triangle},
+        render::render_image,
+        scene::{Scene, SubObject},
     },
+    transform::Transform,
 };
+
+fn load_obj_model(file_name: &str, objects: &mut Vec<Box<dyn Primitive>>) {
+    let mut tris = Vec::new();
+    let mut aabb = AABB::NEG_INF;
+    match tobj::load_obj(
+        file_name,
+        &tobj::LoadOptions {
+            triangulate: true,
+            single_index: true,
+            ..Default::default()
+        },
+    ) {
+        Ok((models, _)) => {
+            for model in models {
+                let mesh = &model.mesh;
+                for indices in mesh.indices.chunks_exact(3) {
+                    let mut vertices = [Vec3::ZERO; 3];
+                    for v in 0..3 {
+                        let i = indices[v] as usize;
+                        vertices[v] = Vec3::new(
+                            mesh.positions[(3 * i) as usize],
+                            mesh.positions[(3 * i + 1) as usize],
+                            mesh.positions[(3 * i + 2) as usize],
+                        );
+                        aabb.add_point(vertices[v]);
+                    }
+                    tris.push(Triangle::new(vertices[0], vertices[1], vertices[2]));
+                }
+            }
+        }
+        Err(err) => {
+            eprintln!("Failed to load .obj file '{}': {}", file_name, err);
+        }
+    }
+
+    let scale = 3.0 / (aabb.extent().x() + aabb.extent().y() + aabb.extent().z());
+
+    for tri in tris {
+        let mut new_vertices = [Vec3::ZERO; 3];
+        for i in 0..3 {
+            new_vertices[i] = (tri.vertices()[i] - aabb.center()) * scale
+        }
+        objects.push(Box::new(Triangle::new(
+            new_vertices[0],
+            new_vertices[1],
+            new_vertices[2],
+        )));
+    }
+}
 
 fn main() {
     const WIDTH: u32 = 1200;
@@ -24,7 +79,7 @@ fn main() {
     let look_at = Vec3::new(0.0, 0.0, 0.0);
     let look_up = Vec3::new(0.0, 1.0, 0.0);
 
-    let camera_mat = Mat4::look_at(&look_from, &look_at, &look_up);
+    let camera_transform = Transform::look_at(&look_from, &look_at, &look_up);
 
     let camera = Camera::new(
         WIDTH as f32 / HEIGHT as f32,
@@ -33,13 +88,38 @@ fn main() {
         0.6f32.to_radians(),
     );
 
-    let mut objects = Vec::<Box<dyn Hittable>>::new();
+    let mut scene = Scene::new();
+
+    let mut objects = Vec::<Box<dyn Primitive>>::new();
+    load_obj_model("res/villager.obj", &mut objects);
+    let villager_id = scene.add_mesh(SubObject::new(objects));
+
+    scene.add_blas_instance(
+        villager_id,
+        Transform::look_at_scale(
+            &Vec3::new(-5.0, 1.0, -6.0),
+            &Vec3::new(13.0, 2.0, 3.0),
+            &Vec3::new(0.0, 1.0, 0.0),
+            &Vec3::from_value(1.5),
+        ),
+        Material::new_emissive(Vec3::new(0.902, 0.554, 0.388)),
+    );
+    scene.add_blas_instance(
+        villager_id,
+        Transform::look_at_scale(
+            &Vec3::new(-7.0, 1.0, 2.0),
+            &(Vec3::new(-7.0, 1.0, 2.0) - Vec3::new(13.0, 2.0, 3.0)),
+            &Vec3::new(0.0, 1.0, 0.0),
+            &Vec3::from_value(1.5),
+        ),
+        Material::new_metal(Vec3::new(0.404, 0.902, 0.388), 0.3),
+    );
+
     let ground_material = Material::new_lambertian(Vec3::new(0.5, 0.5, 0.5));
-    objects.push(Box::new(Sphere::new(
-        Vec3::new(0.0, -1000.0, 0.0),
-        1000.0,
-        &ground_material,
-    )));
+    scene.add_global_primitive(
+        Box::new(Sphere::new(Vec3::new(0.0, -1000.0, 0.0), 1000.0)),
+        ground_material,
+    );
 
     let mut rng = Xoshiro256PlusPlus::seed_from_u64(283748328);
 
@@ -57,43 +137,50 @@ fn main() {
                     let albedo = Vec3::random_range(0.0, 1.0, &mut rng)
                         .pairwise(&Vec3::random_range(0.0, 1.0, &mut rng));
                     let lambertian = Material::new_lambertian(albedo);
-                    objects.push(Box::new(Sphere::new(center, 0.2, &lambertian)));
+                    scene.add_global_primitive(Box::new(Sphere::new(center, 0.2)), lambertian);
                 } else if choose_mat < 0.8 {
                     let color = Vec3::random_range(0.5, 1.0, &mut rng);
                     let emissive = Material::new_emissive(color);
-                    objects.push(Box::new(Sphere::new(center, 0.2, &emissive)));
+                    scene.add_global_primitive(Box::new(Sphere::new(center, 0.2)), emissive);
                 } else if choose_mat < 0.95 {
                     let albedo = Vec3::random_range(0.5, 1.0, &mut rng);
                     let fuzz = rng.random_range(0.0..=0.5);
                     let metal = Material::new_metal(albedo, fuzz);
-                    objects.push(Box::new(Sphere::new(center, 0.2, &metal)));
+                    scene.add_global_primitive(Box::new(Sphere::new(center, 0.2)), metal);
                 } else {
                     let dielectric = Material::new_dielectric(1.5);
-                    objects.push(Box::new(Sphere::new(center, 0.2, &dielectric)));
+                    scene.add_global_primitive(Box::new(Sphere::new(center, 0.2)), dielectric);
                 }
             }
         }
     }
 
-    objects.push(Box::new(Sphere::new(
-        Vec3::new(0.0, 1.0, 0.0),
-        1.0,
-        &Material::new_dielectric(1.5),
-    )));
-    objects.push(Box::new(Sphere::new(
-        Vec3::new(-4.0, 1.0, 0.0),
-        1.0,
-        &Material::new_lambertian(Vec3::new(0.4, 0.2, 0.1)),
-    )));
-    objects.push(Box::new(Sphere::new(
-        Vec3::new(4.0, 1.0, 0.0),
-        1.0,
-        &Material::new_metal(Vec3::new(0.7, 0.6, 0.5), 0.0),
-    )));
+    scene.add_global_primitive(
+        Box::new(Sphere::new(Vec3::new(0.0, 1.0, 0.0), 1.0)),
+        Material::new_dielectric(1.5),
+    );
+    scene.add_global_primitive(
+        Box::new(Sphere::new(Vec3::new(-4.0, 1.0, 0.0), 1.0)),
+        Material::new_lambertian(Vec3::new(0.4, 0.2, 0.1)),
+    );
+    scene.add_global_primitive(
+        Box::new(Sphere::new(Vec3::new(4.0, 1.0, 0.0), 1.0)),
+        Material::new_metal(Vec3::new(0.7, 0.6, 0.5), 0.0),
+    );
+
+    scene.finalize();
 
     let mut image = RgbImage::new(WIDTH, HEIGHT);
     let t1 = Instant::now();
-    render_image(&mut image, &camera, &camera_mat, &objects, SPP, 25, THREADS);
+    render_image(
+        &mut image,
+        &camera,
+        &camera_transform,
+        &scene,
+        SPP,
+        25,
+        THREADS,
+    );
     let t2 = Instant::now();
 
     let time = t2 - t1;

@@ -53,6 +53,10 @@ impl Vec3 {
         *self / self.len()
     }
 
+    pub fn inverse(&self) -> Self {
+        Self::new(1.0 / self.x(), 1.0 / self.y(), 1.0 / self.z())
+    }
+
     pub fn min(&self, b: &Self) -> Self {
         Self::new(
             self.x().min(b.x()),

@@ -1,6 +1,6 @@
 use std::ops::{Index, IndexMut, Mul};
 
-use crate::math::{Vec3, Vec4};
+use crate::math::{Quat, Vec3, Vec4};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Mat4 {
@@ -8,8 +8,8 @@ pub struct Mat4 {
 }
 
 impl Mat4 {
-    const ZERO: Self = Self::from_elems(&[0.0; 16]);
-    const IDENTITY: Self = Self::from_elems(&[
+    pub const ZERO: Self = Self::from_elems(&[0.0; 16]);
+    pub const IDENTITY: Self = Self::from_elems(&[
         1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0,
     ]);
 
@@ -58,36 +58,20 @@ impl Mat4 {
         result
     }
 
-    pub fn rotate_x(angle: f32) -> Self {
+    pub fn rotate(q: &Quat) -> Self {
         let mut result = Self::IDENTITY;
-        let cos = angle.cos();
-        let sin = angle.sin();
-        result[1][1] = cos;
-        result[1][2] = sin;
-        result[2][1] = -sin;
-        result[2][2] = cos;
-        result
-    }
+        result[0][0] = 1.0 - 2.0 * (q.y().powi(2) + q.z().powi(2));
+        result[0][1] = 2.0 * (q.x() * q.y() + q.z() * q.w());
+        result[0][2] = 2.0 * (q.x() * q.z() - q.y() * q.w());
 
-    pub fn rotate_y(angle: f32) -> Self {
-        let mut result = Self::IDENTITY;
-        let cos = angle.cos();
-        let sin = angle.sin();
-        result[2][2] = cos;
-        result[2][0] = sin;
-        result[0][2] = -sin;
-        result[0][0] = cos;
-        result
-    }
+        result[1][0] = 2.0 * (q.x() * q.y() - q.z() * q.w());
+        result[1][1] = 1.0 - 2.0 * (q.x().powi(2) + q.z().powi(2));
+        result[1][2] = 2.0 * (q.y() * q.z() + q.x() * q.w());
 
-    pub fn rotate_z(angle: f32) -> Self {
-        let mut result = Self::IDENTITY;
-        let cos = angle.cos();
-        let sin = angle.sin();
-        result[0][0] = cos;
-        result[0][1] = sin;
-        result[1][0] = -sin;
-        result[1][1] = cos;
+        result[2][0] = 2.0 * (q.x() * q.z() + q.y() * q.w());
+        result[2][1] = 2.0 * (q.y() * q.z() - q.x() * q.w());
+        result[2][2] = 1.0 - 2.0 * (q.x().powi(2) + q.y().powi(2));
+
         result
     }
 
@@ -99,12 +83,12 @@ impl Mat4 {
         result
     }
 
-    pub fn look_at(from: &Vec3, to: &Vec3, up: &Vec3) -> Self {
-        let forward = (*to - *from).normalized();
+    pub fn look_at(from: &Vec3, at: &Vec3, up: &Vec3) -> Self {
+        let forward = (*at - *from).normalized();
         let right = forward.cross(&*up).normalized();
         let up = right.cross(&forward);
 
-        let mut result = Self::ZERO;
+        let mut result = Self::IDENTITY;
         result[0][0] = right[0];
         result[0][1] = right[1];
         result[0][2] = right[2];
@@ -189,7 +173,7 @@ impl Mul<Mat4> for Mat4 {
 mod tests {
     use core::f32;
 
-    use crate::math::{Mat4, Vec3, Vec4};
+    use crate::math::{Mat4, Quat, Vec3, Vec4};
     use assert_float_eq::assert_float_absolute_eq;
     use rand::{RngExt, SeedableRng, rngs::Xoshiro256PlusPlus};
 
@@ -276,7 +260,9 @@ mod tests {
 
     #[test]
     fn test_rotation() {
-        let mat = Mat4::rotate_x(f32::consts::PI / 4.0);
+        let mat = Mat4::rotate(&Quat::rotate_x(f32::consts::PI / 4.0));
+        println!("wtf {:?}", mat);
+
         let vec = Vec4::new(1.0, 0.0, 0.0, 1.0);
         assert_eq!(mat * vec, vec);
 
@@ -287,7 +273,8 @@ mod tests {
         assert_float_absolute_eq!(result.y(), f32::consts::FRAC_1_SQRT_2);
         assert_eq!(result.w(), 1.0);
 
-        let mat2 = Mat4::rotate_z(f32::consts::PI / 4.0);
+        let mat2 = Mat4::rotate(&Quat::rotate_z(f32::consts::PI / 4.0));
+        println!("wtf2 {:?}", mat2);
 
         let result = mat2 * vec;
         assert_float_absolute_eq!(result.x(), 0.0);

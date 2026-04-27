@@ -13,14 +13,14 @@ use crate::{
         aabb::AABB,
         camera::Camera,
         material::Material,
-        primitives::{Primitive, sphere::Sphere, triangle::Triangle},
+        primitives::{sphere::Sphere, triangle::Triangle},
         render::render_image,
         scene::{Scene, SubObject},
     },
     transform::Transform,
 };
 
-fn load_obj_model(file_name: &str, objects: &mut Vec<Box<dyn Primitive>>) {
+fn load_obj_model(file_name: &str) -> Vec<Triangle> {
     let mut tris = Vec::new();
     let mut aabb = AABB::NEG_INF;
     match tobj::load_obj(
@@ -56,17 +56,14 @@ fn load_obj_model(file_name: &str, objects: &mut Vec<Box<dyn Primitive>>) {
 
     let scale = 3.0 / (aabb.extent().x() + aabb.extent().y() + aabb.extent().z());
 
-    for tri in tris {
+    for tri in &mut tris {
         let mut new_vertices = [Vec3::ZERO; 3];
         for i in 0..3 {
             new_vertices[i] = (tri.vertices()[i] - aabb.center()) * scale
         }
-        objects.push(Box::new(Triangle::new(
-            new_vertices[0],
-            new_vertices[1],
-            new_vertices[2],
-        )));
+        tri.vertices_mut().copy_from_slice(&new_vertices);
     }
+    tris
 }
 
 fn main() {
@@ -90,8 +87,7 @@ fn main() {
 
     let mut scene = Scene::new();
 
-    let mut objects = Vec::<Box<dyn Primitive>>::new();
-    load_obj_model("res/villager.obj", &mut objects);
+    let objects = load_obj_model("res/villager.obj");
     let villager_id = scene.add_mesh(SubObject::new(objects));
 
     scene.add_blas_instance(
@@ -116,8 +112,8 @@ fn main() {
     );
 
     let ground_material = Material::new_lambertian(Vec3::new(0.5, 0.5, 0.5));
-    scene.add_global_primitive(
-        Box::new(Sphere::new(Vec3::new(0.0, -1000.0, 0.0), 1000.0)),
+    scene.add_sphere(
+        Sphere::new(Vec3::new(0.0, -1000.0, 0.0), 1000.0),
         ground_material,
     );
 
@@ -137,34 +133,34 @@ fn main() {
                     let albedo = Vec3::random_range(0.0, 1.0, &mut rng)
                         .pairwise(&Vec3::random_range(0.0, 1.0, &mut rng));
                     let lambertian = Material::new_lambertian(albedo);
-                    scene.add_global_primitive(Box::new(Sphere::new(center, 0.2)), lambertian);
+                    scene.add_sphere(Sphere::new(center, 0.2), lambertian);
                 } else if choose_mat < 0.8 {
                     let color = Vec3::random_range(0.5, 1.0, &mut rng);
                     let emissive = Material::new_emissive(color);
-                    scene.add_global_primitive(Box::new(Sphere::new(center, 0.2)), emissive);
+                    scene.add_sphere(Sphere::new(center, 0.2), emissive);
                 } else if choose_mat < 0.95 {
                     let albedo = Vec3::random_range(0.5, 1.0, &mut rng);
                     let fuzz = rng.random_range(0.0..=0.5);
                     let metal = Material::new_metal(albedo, fuzz);
-                    scene.add_global_primitive(Box::new(Sphere::new(center, 0.2)), metal);
+                    scene.add_sphere(Sphere::new(center, 0.2), metal);
                 } else {
                     let dielectric = Material::new_dielectric(1.5);
-                    scene.add_global_primitive(Box::new(Sphere::new(center, 0.2)), dielectric);
+                    scene.add_sphere(Sphere::new(center, 0.2), dielectric);
                 }
             }
         }
     }
 
-    scene.add_global_primitive(
-        Box::new(Sphere::new(Vec3::new(0.0, 1.0, 0.0), 1.0)),
+    scene.add_sphere(
+        Sphere::new(Vec3::new(0.0, 1.0, 0.0), 1.0),
         Material::new_dielectric(1.5),
     );
-    scene.add_global_primitive(
-        Box::new(Sphere::new(Vec3::new(-4.0, 1.0, 0.0), 1.0)),
+    scene.add_sphere(
+        Sphere::new(Vec3::new(-4.0, 1.0, 0.0), 1.0),
         Material::new_lambertian(Vec3::new(0.4, 0.2, 0.1)),
     );
-    scene.add_global_primitive(
-        Box::new(Sphere::new(Vec3::new(4.0, 1.0, 0.0), 1.0)),
+    scene.add_sphere(
+        Sphere::new(Vec3::new(4.0, 1.0, 0.0), 1.0),
         Material::new_metal(Vec3::new(0.7, 0.6, 0.5), 0.0),
     );
 

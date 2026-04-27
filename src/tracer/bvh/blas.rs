@@ -1,16 +1,12 @@
 use core::f32;
-use std::{
-    mem,
-    ops::{Deref, Range},
-    u32,
-};
+use std::{mem, ops::Range, u32};
 
 use crate::tracer::{
     aabb::AABB,
     bvh::bvh_utils::{binned_sah, partition},
     primitives::Primitive,
     ray::{Ray, RayHit},
-    scene::InstanceId,
+    scene::{InstanceId, SubObject},
 };
 
 #[derive(Debug, Clone)]
@@ -44,26 +40,26 @@ pub struct BLAS {
 impl BLAS {
     const NUM_BINS: usize = 16;
 
-    pub fn create(primitives: &[Box<dyn Primitive>]) -> Self {
-        assert!(primitives.len() > 0);
+    pub fn create<T: Primitive>(object: &SubObject<T>) -> Self {
+        assert!(object.primitives().len() > 0);
 
         let mut result = Self {
-            nodes: Vec::with_capacity(2 * primitives.len() - 1),
-            primitive_indices: Vec::with_capacity(primitives.len()),
+            nodes: Vec::with_capacity(2 * object.primitives().len() - 1),
+            primitive_indices: Vec::with_capacity(object.primitives().len()),
         };
 
-        for i in 0..primitives.len() {
+        for i in 0..object.primitives().len() {
             result.primitive_indices.push(i as u32);
         }
 
         result.nodes.push(BLASNode {
             aabb: AABB::NEG_INF,
             left: 0,
-            right: primitives.len() as u32,
+            right: object.primitives().len() as u32,
         });
-        result.calc_node_bounds(0, primitives);
+        result.calc_node_bounds(0, object);
 
-        result.build_bvh(0, primitives);
+        result.build_bvh(0, object);
 
         result
     }
@@ -72,31 +68,31 @@ impl BLAS {
         self.nodes[0].aabb
     }
 
-    pub fn traverse(
+    pub fn traverse<T: Primitive>(
         &self,
         ray: &Ray,
         ray_hit: &mut RayHit,
         instance_id: InstanceId,
-        primitives: &[Box<dyn Primitive>],
+        object: &SubObject<T>,
     ) {
         if self.nodes[0].aabb.hit(ray) < f32::INFINITY {
-            self.traverse_impl(0, ray, ray_hit, instance_id, primitives);
+            self.traverse_impl(0, ray, ray_hit, instance_id, object);
         }
     }
 
-    pub fn traverse_impl(
+    pub fn traverse_impl<T: Primitive>(
         &self,
         node_idx: usize,
         ray: &Ray,
         ray_hit: &mut RayHit,
         instance_id: InstanceId,
-        primitives: &[Box<dyn Primitive>],
+        object: &SubObject<T>,
     ) {
         let node = &self.nodes[node_idx];
         if node.is_leaf() {
             for i in node.primitives() {
                 let prim_id = self.primitive_indices[i];
-                let hit = primitives[prim_id as usize].hit(ray, instance_id, prim_id);
+                let hit = object.primitives()[prim_id as usize].hit(ray, instance_id, prim_id);
                 ray_hit.replace_if_closer(&hit);
             }
         } else {
@@ -109,27 +105,27 @@ impl BLAS {
             }
 
             if close_dist < f32::INFINITY && close_dist < ray_hit.dist() {
-                self.traverse_impl(close_idx, ray, ray_hit, instance_id, primitives);
+                self.traverse_impl(close_idx, ray, ray_hit, instance_id, object);
                 if far_dist < f32::INFINITY && far_dist < ray_hit.dist() {
-                    self.traverse_impl(far_idx, ray, ray_hit, instance_id, primitives);
+                    self.traverse_impl(far_idx, ray, ray_hit, instance_id, object);
                 }
             }
         }
     }
 
-    fn calc_node_bounds(&mut self, node_idx: usize, primitives: &[Box<dyn Primitive>]) {
+    fn calc_node_bounds<T: Primitive>(&mut self, node_idx: usize, object: &SubObject<T>) {
         let node = &mut self.nodes[node_idx];
         node.aabb = AABB::NEG_INF;
         for i in node.primitives() {
-            let primitive = primitives[self.primitive_indices[i] as usize].deref();
+            let primitive = &object.primitives()[self.primitive_indices[i] as usize];
             node.aabb.expand(&primitive.bounding_box());
         }
     }
 
-    fn find_split_plane(
+    fn find_split_plane<T: Primitive>(
         &self,
         node_idx: usize,
-        primitives: &[Box<dyn Primitive>],
+        object: &SubObject<T>,
     ) -> (usize, usize, f32) {
         let node = &self.nodes[node_idx];
         let mut best_sah = f32::INFINITY;
@@ -142,7 +138,7 @@ impl BLAS {
             let (sah, split_pos) = binned_sah::<{ Self::NUM_BINS }, _, _>(
                 &self.primitive_indices[node.primitives()],
                 |&i| {
-                    let primitive = primitives[i as usize].deref();
+                    let primitive = &object.primitives()[i as usize];
                     (
                         primitive.bounding_box(),
                         (((primitive.center()[axis] - bin_start) / bin_size) as usize)
@@ -161,27 +157,28 @@ impl BLAS {
         (best_axis, best_split_pos, best_sah)
     }
 
-    fn partition_primitives(
+    fn partition_primitives<T: Primitive>(
         &mut self,
         node_idx: usize,
         split_axis: usize,
         split_pos: usize,
-        primitives: &[Box<dyn Primitive>],
+        object: &SubObject<T>,
     ) -> u32 {
         let bin_start = self.nodes[node_idx].aabb.min()[split_axis];
         let bin_size = self.nodes[node_idx].aabb.extent()[split_axis] / Self::NUM_BINS as f32;
         partition(
             &mut self.primitive_indices[self.nodes[node_idx].primitives()],
             |&i| {
-                (((primitives[i as usize].center()[split_axis] - bin_start) / bin_size) as usize)
+                (((object.primitives()[i as usize].center()[split_axis] - bin_start) / bin_size)
+                    as usize)
                     < split_pos
             },
         ) as u32
             + self.nodes[node_idx].left
     }
 
-    fn build_bvh(&mut self, node_idx: usize, primitives: &[Box<dyn Primitive>]) {
-        let (split_axis, split_pos, split_sah) = self.find_split_plane(node_idx, primitives);
+    fn build_bvh<T: Primitive>(&mut self, node_idx: usize, object: &SubObject<T>) {
+        let (split_axis, split_pos, split_sah) = self.find_split_plane(node_idx, object);
         let curr_sah = self.nodes[node_idx].aabb.surface_area()
             * self.nodes[node_idx].primitives().len() as f32;
 
@@ -189,7 +186,7 @@ impl BLAS {
             return;
         }
 
-        let right_start = self.partition_primitives(node_idx, split_axis, split_pos, primitives);
+        let right_start = self.partition_primitives(node_idx, split_axis, split_pos, object);
 
         let left_child_idx = self.nodes.len();
         self.nodes.push(BLASNode {
@@ -207,10 +204,10 @@ impl BLAS {
         self.nodes[node_idx].left = left_child_idx as u32;
         self.nodes[node_idx].right = u32::MAX;
 
-        self.calc_node_bounds(left_child_idx, primitives);
-        self.build_bvh(left_child_idx, primitives);
+        self.calc_node_bounds(left_child_idx, object);
+        self.build_bvh(left_child_idx, object);
 
-        self.calc_node_bounds(left_child_idx + 1, primitives);
-        self.build_bvh(left_child_idx + 1, primitives);
+        self.calc_node_bounds(left_child_idx + 1, object);
+        self.build_bvh(left_child_idx + 1, object);
     }
 }

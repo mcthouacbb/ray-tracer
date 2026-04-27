@@ -23,7 +23,7 @@ impl Ray {
 #[derive(Debug, Clone, Copy)]
 pub struct RayHit {
     dist: f32,
-    instance_id: InstanceId,
+    instance_id: Option<InstanceId>,
     primitive_id: u32,
     // uv: (f32, f32),
 }
@@ -31,7 +31,7 @@ pub struct RayHit {
 impl RayHit {
     pub const NONE: Self = Self {
         dist: f32::INFINITY,
-        instance_id: InstanceId::GLOBAL,
+        instance_id: None,
         primitive_id: 0,
     };
 
@@ -44,7 +44,7 @@ impl RayHit {
 
         Self {
             dist,
-            instance_id,
+            instance_id: Some(instance_id),
             primitive_id,
             // uv,
         }
@@ -62,7 +62,7 @@ impl RayHit {
 
     pub fn instance_id(&self) -> InstanceId {
         assert!(self.dist < f32::INFINITY);
-        self.instance_id
+        self.instance_id.unwrap()
     }
 
     pub fn primitive_id(&self) -> u32 {

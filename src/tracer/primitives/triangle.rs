@@ -24,6 +24,10 @@ impl Triangle {
         &self.vertices
     }
 
+    pub fn vertices_mut(&mut self) -> &mut [Vec3; 3] {
+        &mut self.vertices
+    }
+
     pub fn flat_normal(&self) -> Vec3 {
         let edge1 = self.vertices[1] - self.vertices[0];
         let edge2 = self.vertices[2] - self.vertices[0];

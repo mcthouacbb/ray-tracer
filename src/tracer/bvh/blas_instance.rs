@@ -80,7 +80,7 @@ impl Hittable for BLASInstance {
             &self.transform_ray(ray),
             ray_hit,
             instance_id,
-            scene.get_mesh(self.blas_id).primitives(),
+            scene.get_mesh(self.blas_id),
         );
     }
 

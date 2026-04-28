@@ -23,7 +23,7 @@ impl AABB {
     }
 
     pub fn max(&self) -> Vec3 {
-        self.min
+        self.max
     }
 
     pub fn center(&self) -> Vec3 {

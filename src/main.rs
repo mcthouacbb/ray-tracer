@@ -66,6 +66,20 @@ fn load_obj_model(file_name: &str) -> Vec<Triangle> {
     tris
 }
 
+fn write_image(image: &RgbImage, filename: &str) {
+    let mut file = match File::create(filename) {
+        Ok(file) => file,
+        Err(err) => {
+            eprintln!("Cannot open file '{}': {}", filename, err);
+            return;
+        }
+    };
+
+    if let Err(err) = image.write_to(&mut file, ImageFormat::Png) {
+        eprintln!("Cannot write image to file '{}': {}", filename, err);
+    }
+}
+
 fn main() {
     const WIDTH: u32 = 1200;
     const HEIGHT: u32 = 500;
@@ -182,15 +196,27 @@ fn main() {
     let time = t2 - t1;
     println!("Time spent rendering: {}s", time.as_secs_f64());
 
-    let mut file = match File::create("render.png") {
-        Ok(file) => file,
-        Err(err) => {
-            eprintln!("Cannot open file 'render.png': {}", err);
-            return;
-        }
-    };
+    write_image(&image, "render.png");
 
-    if let Err(err) = image.write_to(&mut file, ImageFormat::Png) {
-        eprintln!("Cannot write image to file 'render.png': {}", err);
+    let mut r_image = image.clone();
+    for px in r_image.pixels_mut() {
+        px.0[1] = 0;
+        px.0[2] = 0;
     }
+
+    let mut g_image = image.clone();
+    for px in g_image.pixels_mut() {
+        px.0[0] = 0;
+        px.0[2] = 0;
+    }
+
+    let mut b_image = image.clone();
+    for px in b_image.pixels_mut() {
+        px.0[0] = 0;
+        px.0[1] = 0;
+    }
+
+    write_image(&r_image, "render-r.png");
+    write_image(&g_image, "render-g.png");
+    write_image(&b_image, "render-b.png");
 }

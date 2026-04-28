@@ -35,14 +35,14 @@ pub enum InstanceId {
     Mesh(u32),
 }
 
-pub struct SceneHit {
+pub struct SceneHit<'a> {
     normal: Vec3,
     front_face: bool,
-    material: Material,
+    material: &'a Material,
 }
 
-impl SceneHit {
-    fn new(ray: &Ray, normal: Vec3, material: Material) -> Self {
+impl<'a> SceneHit<'a> {
+    fn new(ray: &Ray, normal: Vec3, material: &'a Material) -> Self {
         if ray.dir().dot(&normal) > 0.0 {
             Self {
                 normal: -normal,
@@ -149,7 +149,7 @@ impl Scene {
                 SceneHit::new(
                     ray,
                     sphere.get_normal(ray, ray_hit.dist()),
-                    self.spheres.1[ray_hit.primitive_id() as usize],
+                    &self.spheres.1[ray_hit.primitive_id() as usize],
                 )
             }
             InstanceId::Mesh(_) => {
@@ -162,12 +162,12 @@ impl Scene {
                     .normal_mat()
                     .transform_dir(&raw_normal)
                     .normalized();
-                SceneHit::new(ray, normal, *instance.material())
+                SceneHit::new(ray, normal, instance.material())
             }
         }
     }
 
-    pub fn trace(&self, ray: &Ray) -> (RayHit, Option<SceneHit>) {
+    pub fn trace(&self, ray: &Ray) -> (RayHit, Option<SceneHit<'_>>) {
         let mut ray_hit = RayHit::NONE;
 
         self.spheres.2.as_ref().unwrap().traverse(

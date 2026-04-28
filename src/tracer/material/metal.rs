@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use rand::RngExt;
 
 use crate::{
@@ -6,17 +8,18 @@ use crate::{
         material::ScatterResult,
         ray::{Ray, RayHit},
         scene::SceneHit,
+        texture::Texture,
     },
 };
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Clone)]
 pub struct Metal {
-    albedo: Vec3,
+    albedo: Arc<dyn Texture>,
     fuzz: f32,
 }
 
 impl Metal {
-    pub fn new(albedo: Vec3, fuzz: f32) -> Self {
+    pub fn new(albedo: Arc<dyn Texture>, fuzz: f32) -> Self {
         assert!(0.0 <= fuzz && fuzz <= 1.0);
         Self { albedo, fuzz }
     }
@@ -35,9 +38,9 @@ impl Metal {
                 break scatter_dir;
             }
         };
-        let scatter_origin = ray.origin() + ray.dir() * ray_hit.dist();
-        let scattered_ray = Ray::new(scatter_origin + scene_hit.normal() * 1e-3, scatter_dir);
+        let hit_pt = ray.origin() + ray.dir() * ray_hit.dist();
+        let scattered_ray = Ray::new(hit_pt + scene_hit.normal() * 1e-3, scatter_dir);
 
-        Some(ScatterResult::new(scattered_ray, self.albedo))
+        Some(ScatterResult::new(scattered_ray, self.albedo.color(hit_pt)))
     }
 }

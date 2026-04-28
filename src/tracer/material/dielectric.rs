@@ -9,7 +9,7 @@ use crate::{
     },
 };
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Clone)]
 pub struct Dielectric {
     refractive_index: f32,
 }

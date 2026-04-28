@@ -3,6 +3,8 @@ mod emissive;
 mod lambertian;
 mod metal;
 
+use std::sync::Arc;
+
 use rand::RngExt;
 
 use crate::{
@@ -13,6 +15,7 @@ use crate::{
         },
         ray::{Ray, RayHit},
         scene::SceneHit,
+        texture::Texture,
     },
 };
 
@@ -39,7 +42,7 @@ impl ScatterResult {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Clone)]
 pub enum Material {
     Lambertian(Lambertian),
     Metal(Metal),
@@ -72,11 +75,11 @@ impl Material {
         }
     }
 
-    pub fn new_lambertian(albedo: Vec3) -> Self {
+    pub fn new_lambertian(albedo: Arc<dyn Texture>) -> Self {
         Self::Lambertian(Lambertian::new(albedo))
     }
 
-    pub fn new_metal(albedo: Vec3, fuzz: f32) -> Self {
+    pub fn new_metal(albedo: Arc<dyn Texture>, fuzz: f32) -> Self {
         Self::Metal(Metal::new(albedo, fuzz))
     }
 

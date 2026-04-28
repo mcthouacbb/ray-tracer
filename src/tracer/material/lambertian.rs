@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use rand::RngExt;
 
 use crate::{
@@ -6,16 +8,17 @@ use crate::{
         material::ScatterResult,
         ray::{Ray, RayHit},
         scene::SceneHit,
+        texture::Texture,
     },
 };
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Clone)]
 pub struct Lambertian {
-    albedo: Vec3,
+    albedo: Arc<dyn Texture>,
 }
 
 impl Lambertian {
-    pub fn new(albedo: Vec3) -> Self {
+    pub fn new(albedo: Arc<dyn Texture>) -> Self {
         Self { albedo }
     }
 
@@ -32,9 +35,9 @@ impl Lambertian {
                 break scatter_dir;
             }
         };
-        let scatter_origin = ray.origin() + ray.dir() * ray_hit.dist();
-        let scattered_ray = Ray::new(scatter_origin + scene_hit.normal() * 1e-3, scatter_dir);
+        let hit_pt = ray.origin() + ray.dir() * ray_hit.dist();
+        let scattered_ray = Ray::new(hit_pt + scene_hit.normal() * 1e-3, scatter_dir);
 
-        Some(ScatterResult::new(scattered_ray, self.albedo))
+        Some(ScatterResult::new(scattered_ray, self.albedo.color(hit_pt)))
     }
 }

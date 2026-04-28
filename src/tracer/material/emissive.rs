@@ -1,6 +1,6 @@
 use crate::math::Vec3;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Clone)]
 pub struct Emissive {
     color: Vec3,
 }

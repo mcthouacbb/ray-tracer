@@ -2,7 +2,6 @@ use crate::{
     math::Vec3,
     tracer::{
         bvh::{blas::BLAS, blas_instance::BLASInstance, tlas::TLAS},
-        hittable::Hittable,
         material::Material,
         primitives::{Primitive, sphere::Sphere, triangle::Triangle},
         ray::{Ray, RayHit},

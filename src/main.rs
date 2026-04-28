@@ -197,26 +197,4 @@ fn main() {
     println!("Time spent rendering: {}s", time.as_secs_f64());
 
     write_image(&image, "render.png");
-
-    let mut r_image = image.clone();
-    for px in r_image.pixels_mut() {
-        px.0[1] = 0;
-        px.0[2] = 0;
-    }
-
-    let mut g_image = image.clone();
-    for px in g_image.pixels_mut() {
-        px.0[0] = 0;
-        px.0[2] = 0;
-    }
-
-    let mut b_image = image.clone();
-    for px in b_image.pixels_mut() {
-        px.0[0] = 0;
-        px.0[1] = 0;
-    }
-
-    write_image(&r_image, "render-r.png");
-    write_image(&g_image, "render-g.png");
-    write_image(&b_image, "render-b.png");
 }

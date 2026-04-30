@@ -42,16 +42,18 @@ impl Dielectric {
         let cos = -unit_dir.dot(&scene_hit.normal());
         let sin = (1.0 - cos.powi(2)).max(0.0).sqrt();
 
+        let mut scatter_origin = ray.origin() + ray.dir() * ray_hit.dist();
         let scatter_dir = if refractive_index * sin > 1.0
             || Self::reflectance(cos, refractive_index) > rng.random_range(0.0..=1.0)
         {
+            scatter_origin += scene_hit.normal() * 1e-3;
             unit_dir.reflect(&scene_hit.normal())
         } else {
+            scatter_origin -= scene_hit.normal() * 1e-3;
             unit_dir.refract(&scene_hit.normal(), refractive_index)
         };
-        let scatter_origin = ray.origin() + ray.dir() * ray_hit.dist();
 
-        let scattered_ray = Ray::new(scatter_origin + scene_hit.normal() * 1e-3, scatter_dir);
+        let scattered_ray = Ray::new(scatter_origin, scatter_dir);
 
         Some(ScatterResult::new(scattered_ray, Vec3::new(1.0, 1.0, 1.0)))
     }

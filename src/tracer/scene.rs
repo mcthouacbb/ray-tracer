@@ -141,7 +141,7 @@ impl Scene {
         &self.spheres.0.primitives[id as usize]
     }
 
-    pub fn get_scene_hit(&self, ray: &Ray, ray_hit: &RayHit) -> SceneHit {
+    pub fn get_scene_hit(&self, ray: &Ray, ray_hit: &RayHit) -> SceneHit<'_> {
         let instance_id = ray_hit.instance_id();
         match instance_id {
             InstanceId::Sphere => {

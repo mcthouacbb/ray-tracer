@@ -1,5 +1,8 @@
 pub mod solid_color;
+pub mod spatial_checker;
+
 pub use solid_color::*;
+pub use spatial_checker::*;
 
 use crate::math::Vec3;
 

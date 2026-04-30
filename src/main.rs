@@ -16,7 +16,7 @@ use crate::{
         primitives::{sphere::Sphere, triangle::Triangle},
         render::render_image,
         scene::{Scene, SubObject},
-        texture::SolidColor,
+        texture::{SolidColor, SpatialChecker},
     },
     transform::Transform,
 };
@@ -129,8 +129,10 @@ fn main() {
         ),
     );
 
-    let ground_material =
-        Material::new_lambertian(Arc::new(SolidColor::new(Vec3::new(0.5, 0.5, 0.5))));
+    let even_color = Arc::new(SolidColor::new(Vec3::new(0.2, 0.3, 0.1)));
+    let odd_color = Arc::new(SolidColor::new(Vec3::new(0.9, 0.9, 0.9)));
+    let checker = Arc::new(SpatialChecker::new(0.32, even_color, odd_color));
+    let ground_material = Material::new_lambertian(checker);
     scene.add_sphere(
         Sphere::new(Vec3::new(0.0, -1000.0, 0.0), 1000.0),
         ground_material,

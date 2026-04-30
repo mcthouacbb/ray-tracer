@@ -35,25 +35,28 @@ pub enum InstanceId {
     Mesh(u32),
 }
 
-pub struct SceneHit {
+pub struct SceneHit<'a> {
     normal: Vec3,
     front_face: bool,
-    material: Material,
+    material: &'a Material,
+    uv: (f32, f32),
 }
 
-impl SceneHit {
-    fn new(ray: &Ray, normal: Vec3, material: Material) -> Self {
+impl<'a> SceneHit<'a> {
+    fn new(ray: &Ray, normal: Vec3, material: &'a Material, uv: (f32, f32)) -> Self {
         if ray.dir().dot(&normal) > 0.0 {
             Self {
                 normal: -normal,
                 front_face: false,
                 material,
+                uv,
             }
         } else {
             Self {
                 normal,
                 front_face: true,
                 material,
+                uv,
             }
         }
     }
@@ -68,6 +71,10 @@ impl SceneHit {
 
     pub fn material(&self) -> &Material {
         &self.material
+    }
+
+    pub fn uv(&self) -> (f32, f32) {
+        self.uv
     }
 }
 
@@ -141,15 +148,17 @@ impl Scene {
         &self.spheres.0.primitives[id as usize]
     }
 
-    pub fn get_scene_hit(&self, ray: &Ray, ray_hit: &RayHit) -> SceneHit {
+    pub fn get_scene_hit(&self, ray: &Ray, ray_hit: &RayHit) -> SceneHit<'_> {
         let instance_id = ray_hit.instance_id();
         match instance_id {
             InstanceId::Sphere => {
                 let sphere = self.get_sphere(ray_hit.primitive_id());
+                let hit_pt = ray.origin() + ray_hit.dist() * ray.dir();
                 SceneHit::new(
                     ray,
                     sphere.get_normal(ray, ray_hit.dist()),
-                    self.spheres.1[ray_hit.primitive_id() as usize],
+                    &self.spheres.1[ray_hit.primitive_id() as usize],
+                    sphere.get_uv(&hit_pt),
                 )
             }
             InstanceId::Mesh(_) => {
@@ -162,12 +171,12 @@ impl Scene {
                     .normal_mat()
                     .transform_dir(&raw_normal)
                     .normalized();
-                SceneHit::new(ray, normal, *instance.material())
+                SceneHit::new(ray, normal, instance.material(), ray_hit.tri_uv().unwrap())
             }
         }
     }
 
-    pub fn trace(&self, ray: &Ray) -> (RayHit, Option<SceneHit>) {
+    pub fn trace(&self, ray: &Ray) -> (RayHit, Option<SceneHit<'_>>) {
         let mut ray_hit = RayHit::NONE;
 
         self.spheres.2.as_ref().unwrap().traverse(

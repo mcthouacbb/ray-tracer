@@ -25,7 +25,7 @@ pub struct RayHit {
     dist: f32,
     instance_id: Option<InstanceId>,
     primitive_id: u32,
-    // uv: (f32, f32),
+    tri_uv: Option<(f32, f32)>,
 }
 
 impl RayHit {
@@ -33,12 +33,14 @@ impl RayHit {
         dist: f32::INFINITY,
         instance_id: None,
         primitive_id: 0,
+        tri_uv: None,
     };
 
     pub fn new(
         dist: f32,
         instance_id: InstanceId,
-        primitive_id: u32, /*, uv: (f32, f32)*/
+        primitive_id: u32,
+        tri_uv: Option<(f32, f32)>,
     ) -> Self {
         assert!(dist < f32::INFINITY);
 
@@ -46,7 +48,7 @@ impl RayHit {
             dist,
             instance_id: Some(instance_id),
             primitive_id,
-            // uv,
+            tri_uv,
         }
     }
 
@@ -70,7 +72,8 @@ impl RayHit {
         self.primitive_id
     }
 
-    /*pub fn uv(&self) -> (f32, f32) {
-        self.uv
-    }*/
+    pub fn tri_uv(&self) -> Option<(f32, f32)> {
+        assert!(self.dist < f32::INFINITY);
+        self.tri_uv
+    }
 }

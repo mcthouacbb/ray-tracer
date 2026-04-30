@@ -61,7 +61,7 @@ impl Primitive for Triangle {
         let t = f * edge2.dot(&q);
 
         if t > 0.0 {
-            RayHit::new(t, instance_id, primitive_id /*, (u, v)*/)
+            RayHit::new(t, instance_id, primitive_id, Some((u, v)))
         } else {
             RayHit::NONE
         }

@@ -2,9 +2,9 @@ mod math;
 mod tracer;
 mod transform;
 
-use std::{fs::File, time::Instant};
+use std::{fs::File, sync::Arc, time::Instant};
 
-use image::{ImageFormat, RgbImage};
+use image::{ImageFormat, ImageReader, RgbImage};
 use rand::{RngExt, SeedableRng, rngs::Xoshiro256PlusPlus};
 
 use crate::{
@@ -13,9 +13,13 @@ use crate::{
         aabb::AABB,
         camera::Camera,
         material::Material,
-        primitives::{sphere::Sphere, triangle::Triangle},
+        primitives::{
+            sphere::{self, Sphere},
+            triangle::Triangle,
+        },
         render::render_image,
         scene::{Scene, SubObject},
+        texture::{ImageTexture, SolidColor, SpatialChecker},
     },
     transform::Transform,
 };
@@ -122,10 +126,16 @@ fn main() {
             &Vec3::new(0.0, 1.0, 0.0),
             &Vec3::from_value(1.5),
         ),
-        Material::new_metal(Vec3::new(0.404, 0.902, 0.388), 0.3),
+        Material::new_metal(
+            Arc::new(SolidColor::new(Vec3::new(0.404, 0.902, 0.388))),
+            0.3,
+        ),
     );
 
-    let ground_material = Material::new_lambertian(Vec3::new(0.5, 0.5, 0.5));
+    let even_color = Arc::new(SolidColor::new(Vec3::new(0.2, 0.3, 0.1)));
+    let odd_color = Arc::new(SolidColor::new(Vec3::new(0.9, 0.9, 0.9)));
+    let checker = Arc::new(SpatialChecker::new(0.32, even_color, odd_color));
+    let ground_material = Material::new_lambertian(checker);
     scene.add_sphere(
         Sphere::new(Vec3::new(0.0, -1000.0, 0.0), 1000.0),
         ground_material,
@@ -146,7 +156,7 @@ fn main() {
                 if choose_mat < 0.5 {
                     let albedo = Vec3::random_range(0.0, 1.0, &mut rng)
                         .pairwise(&Vec3::random_range(0.0, 1.0, &mut rng));
-                    let lambertian = Material::new_lambertian(albedo);
+                    let lambertian = Material::new_lambertian(Arc::new(SolidColor::new(albedo)));
                     scene.add_sphere(Sphere::new(center, 0.2), lambertian);
                 } else if choose_mat < 0.8 {
                     let color = Vec3::random_range(0.5, 1.0, &mut rng);
@@ -155,7 +165,7 @@ fn main() {
                 } else if choose_mat < 0.95 {
                     let albedo = Vec3::random_range(0.5, 1.0, &mut rng);
                     let fuzz = rng.random_range(0.0..=0.5);
-                    let metal = Material::new_metal(albedo, fuzz);
+                    let metal = Material::new_metal(Arc::new(SolidColor::new(albedo)), fuzz);
                     scene.add_sphere(Sphere::new(center, 0.2), metal);
                 } else {
                     let dielectric = Material::new_dielectric(1.5);
@@ -165,17 +175,29 @@ fn main() {
         }
     }
 
+    // unwrap() lol!
+    let earth_image = ImageReader::open("res/earthmap.jpg")
+        .unwrap()
+        .decode()
+        .unwrap()
+        .into_rgb32f();
+    let earth_texture = Arc::new(ImageTexture::new(earth_image));
+    let earth_material = Material::new_lambertian(earth_texture);
+
+    scene.add_sphere(Sphere::new(Vec3::new(-1.0, 1.5, 3.8), 0.8), earth_material);
+
     scene.add_sphere(
         Sphere::new(Vec3::new(0.0, 1.0, 0.0), 1.0),
         Material::new_dielectric(1.5),
     );
+
     scene.add_sphere(
         Sphere::new(Vec3::new(-4.0, 1.0, 0.0), 1.0),
-        Material::new_lambertian(Vec3::new(0.4, 0.2, 0.1)),
+        Material::new_lambertian(Arc::new(SolidColor::new(Vec3::new(0.4, 0.2, 0.1)))),
     );
     scene.add_sphere(
         Sphere::new(Vec3::new(4.0, 1.0, 0.0), 1.0),
-        Material::new_metal(Vec3::new(0.7, 0.6, 0.5), 0.0),
+        Material::new_metal(Arc::new(SolidColor::new(Vec3::new(0.7, 0.6, 0.5))), 0.0),
     );
 
     scene.finalize();

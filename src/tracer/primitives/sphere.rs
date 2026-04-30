@@ -1,3 +1,5 @@
+use std::f32;
+
 use crate::{
     math::Vec3,
     tracer::{
@@ -26,6 +28,15 @@ impl Sphere {
     pub fn radius(&self) -> f32 {
         self.radius
     }
+
+    pub fn get_uv(&self, hit_pt: &Vec3) -> (f32, f32) {
+        let p = (*hit_pt - self.center) / self.radius;
+
+        let phi = (-p.z()).atan2(p.x()) + f32::consts::PI;
+        let theta = (-p.y()).acos();
+
+        (phi / (2.0 * f32::consts::PI), theta / f32::consts::PI)
+    }
 }
 
 impl Primitive for Sphere {
@@ -47,7 +58,7 @@ impl Primitive for Sphere {
                 return RayHit::NONE;
             };
 
-            RayHit::new(dist, instance_id, primitive_id /*, (0.0, 0.0)*/)
+            RayHit::new(dist, instance_id, primitive_id, None)
         } else {
             RayHit::NONE
         }

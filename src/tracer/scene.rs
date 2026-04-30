@@ -39,21 +39,24 @@ pub struct SceneHit<'a> {
     normal: Vec3,
     front_face: bool,
     material: &'a Material,
+    uv: (f32, f32),
 }
 
 impl<'a> SceneHit<'a> {
-    fn new(ray: &Ray, normal: Vec3, material: &'a Material) -> Self {
+    fn new(ray: &Ray, normal: Vec3, material: &'a Material, uv: (f32, f32)) -> Self {
         if ray.dir().dot(&normal) > 0.0 {
             Self {
                 normal: -normal,
                 front_face: false,
                 material,
+                uv,
             }
         } else {
             Self {
                 normal,
                 front_face: true,
                 material,
+                uv,
             }
         }
     }
@@ -68,6 +71,10 @@ impl<'a> SceneHit<'a> {
 
     pub fn material(&self) -> &Material {
         &self.material
+    }
+
+    pub fn uv(&self) -> (f32, f32) {
+        self.uv
     }
 }
 
@@ -146,10 +153,12 @@ impl Scene {
         match instance_id {
             InstanceId::Sphere => {
                 let sphere = self.get_sphere(ray_hit.primitive_id());
+                let hit_pt = ray.origin() + ray_hit.dist() * ray.dir();
                 SceneHit::new(
                     ray,
                     sphere.get_normal(ray, ray_hit.dist()),
                     &self.spheres.1[ray_hit.primitive_id() as usize],
+                    sphere.get_uv(&hit_pt),
                 )
             }
             InstanceId::Mesh(_) => {
@@ -162,7 +171,7 @@ impl Scene {
                     .normal_mat()
                     .transform_dir(&raw_normal)
                     .normalized();
-                SceneHit::new(ray, normal, instance.material())
+                SceneHit::new(ray, normal, instance.material(), ray_hit.tri_uv().unwrap())
             }
         }
     }

@@ -4,7 +4,7 @@ mod transform;
 
 use std::{fs::File, sync::Arc, time::Instant};
 
-use image::{ImageFormat, RgbImage};
+use image::{ImageFormat, ImageReader, RgbImage};
 use rand::{RngExt, SeedableRng, rngs::Xoshiro256PlusPlus};
 
 use crate::{
@@ -13,10 +13,13 @@ use crate::{
         aabb::AABB,
         camera::Camera,
         material::Material,
-        primitives::{sphere::Sphere, triangle::Triangle},
+        primitives::{
+            sphere::{self, Sphere},
+            triangle::Triangle,
+        },
         render::render_image,
         scene::{Scene, SubObject},
-        texture::{SolidColor, SpatialChecker},
+        texture::{ImageTexture, SolidColor, SpatialChecker},
     },
     transform::Transform,
 };
@@ -172,10 +175,22 @@ fn main() {
         }
     }
 
+    // unwrap() lol!
+    let earth_image = ImageReader::open("res/earthmap.jpg")
+        .unwrap()
+        .decode()
+        .unwrap()
+        .into_rgb32f();
+    let earth_texture = Arc::new(ImageTexture::new(earth_image));
+    let earth_material = Material::new_lambertian(earth_texture);
+
+    scene.add_sphere(Sphere::new(Vec3::new(-1.0, 1.5, 3.8), 0.8), earth_material);
+
     scene.add_sphere(
         Sphere::new(Vec3::new(0.0, 1.0, 0.0), 1.0),
         Material::new_dielectric(1.5),
     );
+
     scene.add_sphere(
         Sphere::new(Vec3::new(-4.0, 1.0, 0.0), 1.0),
         Material::new_lambertian(Arc::new(SolidColor::new(Vec3::new(0.4, 0.2, 0.1)))),

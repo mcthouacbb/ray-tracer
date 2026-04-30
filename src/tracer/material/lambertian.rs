@@ -38,6 +38,10 @@ impl Lambertian {
         let hit_pt = ray.origin() + ray.dir() * ray_hit.dist();
         let scattered_ray = Ray::new(hit_pt + scene_hit.normal() * 1e-3, scatter_dir);
 
-        Some(ScatterResult::new(scattered_ray, self.albedo.color(hit_pt)))
+        Some(ScatterResult::new(
+            scattered_ray,
+            self.albedo
+                .color(scene_hit.uv().0, scene_hit.uv().1, hit_pt),
+        ))
     }
 }

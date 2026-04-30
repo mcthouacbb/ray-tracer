@@ -1,3 +1,4 @@
+use core::num;
 use std::{
     collections::VecDeque,
     f32,
@@ -78,7 +79,7 @@ pub fn render_image(
 
     let tile_queue = Arc::new(Mutex::new(tiles));
 
-    let pixel_buffer = (0..width * height)
+    let pixel_buffer = (0..3 * width * height)
         .map(|_| AtomicU32::new(0))
         .collect::<Vec<AtomicU32>>();
 
@@ -122,13 +123,14 @@ pub fn render_image(
                                 accum_color += color;
                             }
 
-                            let pixel_color = accum_color / spp as f32;
-                            let r = (linear_to_srgb(pixel_color.x()) * 255.0 + 0.5) as u8;
-                            let g = (linear_to_srgb(pixel_color.y()) * 255.0 + 0.5) as u8;
-                            let b = (linear_to_srgb(pixel_color.z()) * 255.0 + 0.5) as u8;
-                            let rgb_u32 = (r as u32) << 16 | (g as u32) << 8 | b as u32;
-                            pixel_buffer[(y * width + x) as usize]
-                                .store(rgb_u32, Ordering::Relaxed);
+                            let raw_color = accum_color / spp as f32;
+                            let pixel_idx = (y * width + x) as usize;
+                            pixel_buffer[3 * pixel_idx]
+                                .store(raw_color.x().to_bits(), Ordering::Relaxed);
+                            pixel_buffer[3 * pixel_idx + 1]
+                                .store(raw_color.y().to_bits(), Ordering::Relaxed);
+                            pixel_buffer[3 * pixel_idx + 2]
+                                .store(raw_color.z().to_bits(), Ordering::Relaxed);
                         }
                     }
 
@@ -138,13 +140,40 @@ pub fn render_image(
         }
     });
 
+    let mut max_luminance = 0.0f32;
+
     for y in 0..height {
         for x in 0..width {
-            let rgb_u32 = pixel_buffer[(y * width + x) as usize].load(Ordering::Relaxed);
-            let r = rgb_u32 >> 16;
-            let g = (rgb_u32 >> 8) & 0xFF;
-            let b = rgb_u32 & 0xFF;
-            image.put_pixel(x, y, Rgb([r as u8, g as u8, b as u8]));
+            let pixel_idx = (y * width + x) as usize;
+            let r = f32::from_bits(pixel_buffer[3 * pixel_idx].load(Ordering::Relaxed));
+            let g = f32::from_bits(pixel_buffer[3 * pixel_idx + 1].load(Ordering::Relaxed));
+            let b = f32::from_bits(pixel_buffer[3 * pixel_idx + 2].load(Ordering::Relaxed));
+
+            let luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+            max_luminance = max_luminance.max(luminance);
+        }
+    }
+
+    for y in 0..height {
+        for x in 0..width {
+            let pixel_idx = (y * width + x) as usize;
+            let r = f32::from_bits(pixel_buffer[3 * pixel_idx].load(Ordering::Relaxed));
+            let g = f32::from_bits(pixel_buffer[3 * pixel_idx + 1].load(Ordering::Relaxed));
+            let b = f32::from_bits(pixel_buffer[3 * pixel_idx + 2].load(Ordering::Relaxed));
+
+            let luminance_old = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+            let numerator = luminance_old * (1.0 + luminance_old / max_luminance.powi(2));
+            let luminance_new = numerator / (1.0 + luminance_old);
+
+            let tr = r * luminance_new / luminance_old;
+            let tg = g * luminance_new / luminance_old;
+            let tb = b * luminance_new / luminance_old;
+
+            let sr = (linear_to_srgb(tr) * 255.0 + 0.5) as u8;
+            let sg = (linear_to_srgb(tg) * 255.0 + 0.5) as u8;
+            let sb = (linear_to_srgb(tb) * 255.0 + 0.5) as u8;
+
+            image.put_pixel(x, y, Rgb([sr as u8, sg as u8, sb as u8]));
         }
     }
 

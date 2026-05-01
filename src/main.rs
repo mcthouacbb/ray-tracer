@@ -13,10 +13,7 @@ use crate::{
         aabb::AABB,
         camera::Camera,
         material::Material,
-        primitives::{
-            sphere::{self, Sphere},
-            triangle::Triangle,
-        },
+        primitives::{sphere::Sphere, triangle::Triangle},
         render::render_image,
         scene::{Scene, SubObject},
         texture::{ImageTexture, SolidColor, SpatialChecker},

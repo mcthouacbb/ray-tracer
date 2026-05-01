@@ -15,7 +15,7 @@ use rand::{RngExt, SeedableRng, rngs::Xoshiro256PlusPlus};
 
 use crate::{
     math::Vec3,
-    tracer::{camera::Camera, ray::Ray, scene::Scene},
+    tracer::{camera::Camera, ray::Ray, scene::Scene, tone_mapping},
     transform::Transform,
 };
 
@@ -140,8 +140,6 @@ pub fn render_image(
         }
     });
 
-    let mut max_luminance = 0.0f32;
-
     for y in 0..height {
         for x in 0..width {
             let pixel_idx = (y * width + x) as usize;
@@ -149,29 +147,11 @@ pub fn render_image(
             let g = f32::from_bits(pixel_buffer[3 * pixel_idx + 1].load(Ordering::Relaxed));
             let b = f32::from_bits(pixel_buffer[3 * pixel_idx + 2].load(Ordering::Relaxed));
 
-            let luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
-            max_luminance = max_luminance.max(luminance);
-        }
-    }
+            let tc = tone_mapping::aces(&Vec3::new(r, g, b));
 
-    for y in 0..height {
-        for x in 0..width {
-            let pixel_idx = (y * width + x) as usize;
-            let r = f32::from_bits(pixel_buffer[3 * pixel_idx].load(Ordering::Relaxed));
-            let g = f32::from_bits(pixel_buffer[3 * pixel_idx + 1].load(Ordering::Relaxed));
-            let b = f32::from_bits(pixel_buffer[3 * pixel_idx + 2].load(Ordering::Relaxed));
-
-            let luminance_old = 0.2126 * r + 0.7152 * g + 0.0722 * b;
-            let numerator = luminance_old * (1.0 + luminance_old / max_luminance.powi(2));
-            let luminance_new = numerator / (1.0 + luminance_old);
-
-            let tr = r * luminance_new / luminance_old;
-            let tg = g * luminance_new / luminance_old;
-            let tb = b * luminance_new / luminance_old;
-
-            let sr = (linear_to_srgb(tr) * 255.0 + 0.5) as u8;
-            let sg = (linear_to_srgb(tg) * 255.0 + 0.5) as u8;
-            let sb = (linear_to_srgb(tb) * 255.0 + 0.5) as u8;
+            let sr = (linear_to_srgb(tc.x()) * 255.0 + 0.5) as u8;
+            let sg = (linear_to_srgb(tc.y()) * 255.0 + 0.5) as u8;
+            let sb = (linear_to_srgb(tc.z()) * 255.0 + 0.5) as u8;
 
             image.put_pixel(x, y, Rgb([sr as u8, sg as u8, sb as u8]));
         }

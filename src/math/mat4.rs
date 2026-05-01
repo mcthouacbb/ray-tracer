@@ -25,7 +25,7 @@ impl Mat4 {
         }
     }
 
-    pub fn from_cols(columns: [Vec4; 4]) -> Self {
+    pub const fn from_cols(columns: [Vec4; 4]) -> Self {
         Self { columns }
     }
 

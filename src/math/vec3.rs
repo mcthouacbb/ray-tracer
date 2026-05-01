@@ -78,7 +78,7 @@ impl Vec3 {
     }
 
     pub fn cross(&self, b: &Self) -> Self {
-        return Vec3::new(
+        return Self::new(
             self.y() * b.z() - self.z() * b.y(),
             self.z() * b.x() - self.x() * b.z(),
             self.x() * b.y() - self.y() * b.x(),
@@ -96,7 +96,7 @@ impl Vec3 {
     }
 
     pub fn pairwise(&self, other: &Self) -> Self {
-        Vec3::new(
+        Self::new(
             self.x() * other.x(),
             self.y() * other.y(),
             self.z() * other.z(),

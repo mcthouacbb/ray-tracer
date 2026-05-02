@@ -110,17 +110,6 @@ fn main() {
     let objects = load_obj_model("res/villager.obj");
     let villager_id = scene.add_mesh(SubObject::new(objects));
 
-    scene.add_blas_instance(
-        villager_id,
-        Transform::look_at_scale(
-            &Vec3::new(-5.0, 1.0, -6.0),
-            &Vec3::new(13.0, 2.0, 3.0),
-            &Vec3::new(0.0, 1.0, 0.0),
-            &Vec3::from_value(1.5),
-        ),
-        Material::new_emissive(Vec3::new(0.902, 0.554, 0.388)),
-    );
-
     let villager_texture = Arc::new(ImageTexture::new(
         ImageReader::open("res/villager.png")
             .unwrap()
@@ -132,12 +121,23 @@ fn main() {
     scene.add_blas_instance(
         villager_id,
         Transform::look_at_scale(
+            &Vec3::new(-5.0, 1.0, -6.0),
+            &Vec3::new(13.0, 2.0, 3.0),
+            &Vec3::new(0.0, 1.0, 0.0),
+            &Vec3::from_value(1.5),
+        ),
+        Material::new_lambertian(villager_texture.clone()),
+    );
+
+    scene.add_blas_instance(
+        villager_id,
+        Transform::look_at_scale(
             &Vec3::new(-7.0, 1.0, 2.0),
             &(Vec3::new(-7.0, 1.0, 2.0) - Vec3::new(13.0, 2.0, 3.0)),
             &Vec3::new(0.0, 1.0, 0.0),
             &Vec3::from_value(1.5),
         ),
-        Material::new_metal(villager_texture, 0.3),
+        Material::new_metal(villager_texture.clone(), 0.3),
     );
 
     let even_color = Arc::new(SolidColor::new(Vec3::new(0.2, 0.3, 0.1)));

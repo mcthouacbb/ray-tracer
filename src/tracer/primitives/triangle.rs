@@ -34,9 +34,9 @@ impl Triangle {
     }
 
     pub fn get_uv(&self, tri_uv: Vec2) -> Vec2 {
-        self.uvs[0] * tri_uv.x()
-            + self.uvs[1] * tri_uv.y()
-            + self.uvs[2] * (1.0 - tri_uv.x() - tri_uv.y())
+        self.uvs[1] * tri_uv.x()
+            + self.uvs[2] * tri_uv.y()
+            + self.uvs[0] * (1.0 - tri_uv.x() - tri_uv.y())
     }
 }
 

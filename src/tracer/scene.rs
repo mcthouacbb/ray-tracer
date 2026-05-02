@@ -171,7 +171,12 @@ impl Scene {
                     .normal_mat()
                     .transform_dir(&raw_normal)
                     .normalized();
-                SceneHit::new(ray, normal, instance.material(), ray_hit.tri_uv().unwrap())
+                SceneHit::new(
+                    ray,
+                    normal,
+                    instance.material(),
+                    triangle.get_uv(ray_hit.tri_uv().unwrap()),
+                )
             }
         }
     }

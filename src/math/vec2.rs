@@ -69,6 +69,16 @@ impl Vec2 {
         Self::new(rng.random_range(min..=max), rng.random_range(min..=max))
     }
 
+    pub fn random_disk(rng: &mut impl RngExt) -> Self {
+        loop {
+            let v = Self::new(rng.random_range(-1.0..=1.0), rng.random_range(-1.0..=1.0));
+            let sqr_len = v.sqr_len();
+            if sqr_len <= 1.0 {
+                return v;
+            }
+        }
+    }
+
     pub fn random_unit(rng: &mut impl RngExt) -> Self {
         loop {
             let v = Self::new(rng.random_range(-1.0..=1.0), rng.random_range(-1.0..=1.0));

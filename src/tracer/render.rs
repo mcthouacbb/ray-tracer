@@ -13,7 +13,7 @@ use indicatif::ProgressBar;
 use rand::{RngExt, SeedableRng, rngs::Xoshiro256PlusPlus};
 
 use crate::{
-    math::Vec3,
+    math::{Vec2, Vec3},
     tracer::{camera::Camera, ray::Ray, scene::Scene, tone_mapping},
     transform::Transform,
 };
@@ -104,14 +104,13 @@ pub fn render_image(
                             let mut accum_color = Vec3::ZERO;
 
                             for _ in 0..spp {
-                                let jitter_x = rng.random_range(-0.5..=0.5f32);
-                                let jitter_y = rng.random_range(-0.5..=0.5f32);
-                                let u = (2.0 * (x as f32 + jitter_x) as f32 - width as f32 + 1.0)
-                                    / width as f32;
-                                let v = -(2.0 * (y as f32 + jitter_y) as f32 - height as f32 + 1.0)
-                                    / height as f32;
+                                let jitter = Vec2::random_range(-0.5, 0.5, &mut rng);
+                                let pixel = Vec2::new(x as f32, y as f32) + jitter;
+                                let uv = (2.0 * pixel
+                                    + Vec2::new(1.0 - width as f32, 1.0 - height as f32))
+                                .pairwise(&Vec2::new(1.0 / width as f32, -1.0 / height as f32));
 
-                                let camera_ray = camera.get_ray_dir(u, v, &mut rng);
+                                let camera_ray = camera.get_ray(uv, &mut rng);
                                 let camera_mat = camera_transform.transform();
                                 let ray = Ray::new(
                                     camera_mat.transform_pos(&camera_ray.origin()),

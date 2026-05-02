@@ -109,13 +109,10 @@ impl Mat4 {
     }
 
     pub fn mul_vec(&self, vec: &Vec4) -> Vec4 {
-        let rows = self.rows();
-        Vec4::new(
-            rows[0].dot(&vec),
-            rows[1].dot(&vec),
-            rows[2].dot(&vec),
-            rows[3].dot(&vec),
-        )
+        self.columns[0] * vec[0]
+            + self.columns[1] * vec[1]
+            + self.columns[2] * vec[2]
+            + self.columns[3] * vec[3]
     }
 
     pub fn transform_pos(&self, pos: &Vec3) -> Vec3 {

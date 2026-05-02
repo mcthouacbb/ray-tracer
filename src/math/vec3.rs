@@ -1,6 +1,8 @@
 use rand::RngExt;
 use std::ops;
 
+use crate::math::Vec2;
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Vec3 {
     elems: [f32; 3],
@@ -78,7 +80,7 @@ impl Vec3 {
     }
 
     pub fn cross(&self, b: &Self) -> Self {
-        return Vec3::new(
+        return Self::new(
             self.y() * b.z() - self.z() * b.y(),
             self.z() * b.x() - self.x() * b.z(),
             self.x() * b.y() - self.y() * b.x(),
@@ -96,7 +98,7 @@ impl Vec3 {
     }
 
     pub fn pairwise(&self, other: &Self) -> Self {
-        Vec3::new(
+        Self::new(
             self.x() * other.x(),
             self.y() * other.y(),
             self.z() * other.z(),
@@ -125,17 +127,9 @@ impl Vec3 {
         }
     }
 
-    pub fn random_unit_disk(rng: &mut impl RngExt) -> Self {
-        loop {
-            let v = Self::new(
-                rng.random_range(-1.0..=1.0),
-                rng.random_range(-1.0..=1.0),
-                0.0,
-            );
-            if v.sqr_len() <= 1.0 {
-                return v;
-            }
-        }
+    pub fn random_disk(rng: &mut impl RngExt) -> Self {
+        let disk = Vec2::random_disk(rng);
+        Self::new(disk.x(), disk.y(), 0.0)
     }
 }
 

@@ -164,7 +164,7 @@ impl ops::Mul<Quat> for Quat {
     type Output = Self;
 
     fn mul(self, rhs: Self) -> Self::Output {
-        Quat::new(
+        Self::new(
             self.x() * rhs.w() + self.w() * rhs.x() + self.y() * rhs.z() - self.z() * rhs.y(),
             self.y() * rhs.w() + self.w() * rhs.y() + self.z() * rhs.x() - self.x() * rhs.z(),
             self.z() * rhs.w() + self.w() * rhs.z() + self.x() * rhs.y() - self.y() * rhs.x(),

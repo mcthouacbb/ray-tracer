@@ -8,7 +8,7 @@ use image::{ImageFormat, ImageReader, RgbImage};
 use rand::{RngExt, SeedableRng, rngs::Xoshiro256PlusPlus};
 
 use crate::{
-    math::Vec3,
+    math::{Vec2, Vec3},
     tracer::{
         aabb::AABB,
         camera::Camera,
@@ -37,6 +37,7 @@ fn load_obj_model(file_name: &str) -> Vec<Triangle> {
                 let mesh = &model.mesh;
                 for indices in mesh.indices.chunks_exact(3) {
                     let mut vertices = [Vec3::ZERO; 3];
+                    let mut uvs = [Vec2::ZERO; 3];
                     for v in 0..3 {
                         let i = indices[v] as usize;
                         vertices[v] = Vec3::new(
@@ -44,9 +45,13 @@ fn load_obj_model(file_name: &str) -> Vec<Triangle> {
                             mesh.positions[(3 * i + 1) as usize],
                             mesh.positions[(3 * i + 2) as usize],
                         );
+                        uvs[v] = Vec2::new(
+                            mesh.texcoords[(2 * i) as usize],
+                            mesh.texcoords[(2 * i + 1) as usize],
+                        );
                         aabb.add_point(vertices[v]);
                     }
-                    tris.push(Triangle::new(vertices[0], vertices[1], vertices[2]));
+                    tris.push(Triangle::new(vertices, uvs));
                 }
             }
         }
@@ -105,6 +110,14 @@ fn main() {
     let objects = load_obj_model("res/villager.obj");
     let villager_id = scene.add_mesh(SubObject::new(objects));
 
+    let villager_texture = Arc::new(ImageTexture::new(
+        ImageReader::open("res/villager.png")
+            .unwrap()
+            .decode()
+            .unwrap()
+            .to_rgb32f(),
+    ));
+
     scene.add_blas_instance(
         villager_id,
         Transform::look_at_scale(
@@ -113,8 +126,9 @@ fn main() {
             &Vec3::new(0.0, 1.0, 0.0),
             &Vec3::from_value(1.5),
         ),
-        Material::new_emissive(Vec3::new(0.902, 0.554, 0.388)),
+        Material::new_lambertian(villager_texture.clone()),
     );
+
     scene.add_blas_instance(
         villager_id,
         Transform::look_at_scale(
@@ -123,10 +137,7 @@ fn main() {
             &Vec3::new(0.0, 1.0, 0.0),
             &Vec3::from_value(1.5),
         ),
-        Material::new_metal(
-            Arc::new(SolidColor::new(Vec3::new(0.404, 0.902, 0.388))),
-            0.3,
-        ),
+        Material::new_metal(villager_texture.clone(), 0.3),
     );
 
     let even_color = Arc::new(SolidColor::new(Vec3::new(0.2, 0.3, 0.1)));

@@ -1,5 +1,5 @@
 use crate::{
-    math::Vec3,
+    math::{Vec2, Vec3},
     tracer::{
         bvh::{blas::BLAS, blas_instance::BLASInstance, tlas::TLAS},
         material::Material,
@@ -39,11 +39,11 @@ pub struct SceneHit<'a> {
     normal: Vec3,
     front_face: bool,
     material: &'a Material,
-    uv: (f32, f32),
+    uv: Vec2,
 }
 
 impl<'a> SceneHit<'a> {
-    fn new(ray: &Ray, normal: Vec3, material: &'a Material, uv: (f32, f32)) -> Self {
+    fn new(ray: &Ray, normal: Vec3, material: &'a Material, uv: Vec2) -> Self {
         if ray.dir().dot(&normal) > 0.0 {
             Self {
                 normal: -normal,
@@ -73,7 +73,7 @@ impl<'a> SceneHit<'a> {
         &self.material
     }
 
-    pub fn uv(&self) -> (f32, f32) {
+    pub fn uv(&self) -> Vec2 {
         self.uv
     }
 }
@@ -171,7 +171,12 @@ impl Scene {
                     .normal_mat()
                     .transform_dir(&raw_normal)
                     .normalized();
-                SceneHit::new(ray, normal, instance.material(), ray_hit.tri_uv().unwrap())
+                SceneHit::new(
+                    ray,
+                    normal,
+                    instance.material(),
+                    triangle.get_uv(ray_hit.tri_uv().unwrap()),
+                )
             }
         }
     }

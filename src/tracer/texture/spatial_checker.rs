@@ -1,6 +1,9 @@
 use std::sync::Arc;
 
-use crate::{math::Vec3, tracer::texture::Texture};
+use crate::{
+    math::{Vec2, Vec3},
+    tracer::texture::Texture,
+};
 
 #[derive(Clone)]
 pub struct SpatialChecker {
@@ -20,15 +23,15 @@ impl SpatialChecker {
 }
 
 impl Texture for SpatialChecker {
-    fn color(&self, u: f32, v: f32, p: Vec3) -> Vec3 {
+    fn color(&self, uv: Vec2, p: Vec3) -> Vec3 {
         let x_coord = (p.x() * self.inv_scale).floor() as i32;
         let y_coord = (p.y() * self.inv_scale).floor() as i32;
         let z_coord = (p.z() * self.inv_scale).floor() as i32;
         let even = (x_coord + y_coord + z_coord) % 2 == 0;
         if even {
-            self.even.color(u, v, p)
+            self.even.color(uv, p)
         } else {
-            self.odd.color(u, v, p)
+            self.odd.color(uv, p)
         }
     }
 }

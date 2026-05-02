@@ -1,6 +1,9 @@
 use image::Rgb32FImage;
 
-use crate::{math::Vec3, tracer::texture::Texture};
+use crate::{
+    math::{Vec2, Vec3},
+    tracer::texture::Texture,
+};
 
 pub struct ImageTexture {
     image: Rgb32FImage,
@@ -13,9 +16,9 @@ impl ImageTexture {
 }
 
 impl Texture for ImageTexture {
-    fn color(&self, u: f32, v: f32, _p: Vec3) -> Vec3 {
-        let tx = self.image.width() as f32 * u.clamp(0.0, 1.0);
-        let ty = self.image.height() as f32 * (1.0 - v.clamp(0.0, 1.0));
+    fn color(&self, uv: Vec2, _p: Vec3) -> Vec3 {
+        let tx = self.image.width() as f32 * uv.x().clamp(0.0, 1.0);
+        let ty = self.image.height() as f32 * (1.0 - uv.y().clamp(0.0, 1.0));
         // TODO: add filtering
         let sample = self.image.get_pixel(
             (tx as u32).clamp(0, self.image.width() - 1),

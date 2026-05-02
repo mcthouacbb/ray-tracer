@@ -1,5 +1,5 @@
 use crate::{
-    math::Vec3,
+    math::{Vec2, Vec3},
     tracer::{
         aabb::AABB,
         primitives::Primitive,
@@ -11,13 +11,12 @@ use crate::{
 #[derive(Debug, Clone, Copy)]
 pub struct Triangle {
     vertices: [Vec3; 3],
+    uvs: [Vec2; 3],
 }
 
 impl Triangle {
-    pub fn new(a: Vec3, b: Vec3, c: Vec3) -> Self {
-        Self {
-            vertices: [a, b, c],
-        }
+    pub fn new(vertices: [Vec3; 3], uvs: [Vec2; 3]) -> Self {
+        Self { vertices, uvs }
     }
 
     pub fn vertices(&self) -> &[Vec3; 3] {
@@ -32,6 +31,12 @@ impl Triangle {
         let edge1 = self.vertices[1] - self.vertices[0];
         let edge2 = self.vertices[2] - self.vertices[0];
         edge1.cross(&edge2).normalized()
+    }
+
+    pub fn get_uv(&self, tri_uv: Vec2) -> Vec2 {
+        self.uvs[1] * tri_uv.x()
+            + self.uvs[2] * tri_uv.y()
+            + self.uvs[0] * (1.0 - tri_uv.x() - tri_uv.y())
     }
 }
 
@@ -61,7 +66,7 @@ impl Primitive for Triangle {
         let t = f * edge2.dot(&q);
 
         if t > 0.0 {
-            RayHit::new(t, instance_id, primitive_id, Some((u, v)))
+            RayHit::new(t, instance_id, primitive_id, Some(Vec2::new(u, v)))
         } else {
             RayHit::NONE
         }

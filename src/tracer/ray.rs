@@ -1,4 +1,7 @@
-use crate::{math::Vec3, tracer::scene::InstanceId};
+use crate::{
+    math::{Vec2, Vec3},
+    tracer::scene::InstanceId,
+};
 
 #[derive(Debug, Clone, Copy)]
 pub struct Ray {
@@ -25,7 +28,7 @@ pub struct RayHit {
     dist: f32,
     instance_id: Option<InstanceId>,
     primitive_id: u32,
-    tri_uv: Option<(f32, f32)>,
+    tri_uv: Option<Vec2>,
 }
 
 impl RayHit {
@@ -40,7 +43,7 @@ impl RayHit {
         dist: f32,
         instance_id: InstanceId,
         primitive_id: u32,
-        tri_uv: Option<(f32, f32)>,
+        tri_uv: Option<Vec2>,
     ) -> Self {
         assert!(dist < f32::INFINITY);
 
@@ -72,7 +75,7 @@ impl RayHit {
         self.primitive_id
     }
 
-    pub fn tri_uv(&self) -> Option<(f32, f32)> {
+    pub fn tri_uv(&self) -> Option<Vec2> {
         assert!(self.dist < f32::INFINITY);
         self.tri_uv
     }

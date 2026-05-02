@@ -40,8 +40,7 @@ impl Lambertian {
 
         Some(ScatterResult::new(
             scattered_ray,
-            self.albedo
-                .color(scene_hit.uv().0, scene_hit.uv().1, hit_pt),
+            self.albedo.color(scene_hit.uv(), hit_pt),
         ))
     }
 }

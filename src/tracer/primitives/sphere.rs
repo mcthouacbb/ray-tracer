@@ -1,7 +1,7 @@
 use std::f32;
 
 use crate::{
-    math::Vec3,
+    math::{Vec2, Vec3},
     tracer::{
         aabb::AABB,
         primitives::Primitive,
@@ -29,13 +29,13 @@ impl Sphere {
         self.radius
     }
 
-    pub fn get_uv(&self, hit_pt: &Vec3) -> (f32, f32) {
+    pub fn get_uv(&self, hit_pt: &Vec3) -> Vec2 {
         let p = (*hit_pt - self.center) / self.radius;
 
         let phi = (-p.z()).atan2(p.x()) + f32::consts::PI;
         let theta = (-p.y()).acos();
 
-        (phi / (2.0 * f32::consts::PI), theta / f32::consts::PI)
+        Vec2::new(phi / (2.0 * f32::consts::PI), theta / f32::consts::PI)
     }
 }
 

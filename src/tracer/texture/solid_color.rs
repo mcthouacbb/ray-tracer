@@ -1,4 +1,7 @@
-use crate::{math::Vec3, tracer::texture::Texture};
+use crate::{
+    math::{Vec2, Vec3},
+    tracer::texture::Texture,
+};
 
 #[derive(Clone)]
 pub struct SolidColor {
@@ -12,7 +15,7 @@ impl SolidColor {
 }
 
 impl Texture for SolidColor {
-    fn color(&self, _u: f32, _v: f32, _p: Vec3) -> Vec3 {
+    fn color(&self, _uv: Vec2, _p: Vec3) -> Vec3 {
         self.albedo
     }
 }

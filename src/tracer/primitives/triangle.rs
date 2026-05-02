@@ -1,5 +1,5 @@
 use crate::{
-    math::Vec3,
+    math::{Vec2, Vec3},
     tracer::{
         aabb::AABB,
         primitives::Primitive,
@@ -61,7 +61,7 @@ impl Primitive for Triangle {
         let t = f * edge2.dot(&q);
 
         if t > 0.0 {
-            RayHit::new(t, instance_id, primitive_id, Some((u, v)))
+            RayHit::new(t, instance_id, primitive_id, Some(Vec2::new(u, v)))
         } else {
             RayHit::NONE
         }

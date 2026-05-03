@@ -137,7 +137,7 @@ fn main() {
             &Vec3::new(0.0, 1.0, 0.0),
             &Vec3::from_value(1.5),
         ),
-        Material::new_metal(villager_texture.clone(), 0.3),
+        Material::new_lambertian(villager_texture.clone()),
     );
 
     let even_color = Arc::new(SolidColor::new(Vec3::new(0.2, 0.3, 0.1)));

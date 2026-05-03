@@ -8,7 +8,7 @@ use image::{ImageFormat, ImageReader, RgbImage};
 use rand::{RngExt, SeedableRng, rngs::Xoshiro256PlusPlus};
 
 use crate::{
-    math::{Vec2, Vec3},
+    math::{Quat, Vec2, Vec3},
     tracer::{
         aabb::AABB,
         camera::Camera,
@@ -108,12 +108,7 @@ impl SkyLight for BasicSkyLight {
     }
 }
 
-fn main() {
-    const WIDTH: u32 = 1200;
-    const HEIGHT: u32 = 500;
-    const SPP: u32 = 500;
-    const THREADS: u32 = 8;
-
+fn spheres_scene(width: u32, height: u32) -> (Camera, Transform, Scene) {
     let look_from = Vec3::new(13.0, 2.0, 3.0);
     let look_at = Vec3::new(0.0, 0.0, 0.0);
     let look_up = Vec3::new(0.0, 1.0, 0.0);
@@ -121,7 +116,7 @@ fn main() {
     let camera_transform = Transform::look_at(&look_from, &look_at, &look_up);
 
     let camera = Camera::new(
-        WIDTH as f32 / HEIGHT as f32,
+        width as f32 / height as f32,
         20.0f32.to_radians(),
         10.0,
         0.6f32.to_radians(),
@@ -129,8 +124,7 @@ fn main() {
 
     let mut scene = Scene::new();
 
-    let objects = load_obj_model("res/villager.obj");
-    let villager_id = scene.add_mesh(SubObject::new(objects));
+    let villager_id = scene.add_mesh(SubObject::new(load_obj_model("res/villager.obj")));
 
     let villager_texture = Arc::new(ImageTexture::new(
         ImageReader::open("res/villager.png")
@@ -237,6 +231,135 @@ fn main() {
     )));
 
     scene.finalize();
+
+    (camera, camera_transform, scene)
+}
+
+fn cornell_box(width: u32, height: u32) -> (Camera, Transform, Scene) {
+    fn add_quad(scene: &mut Scene, pt: Vec3, dir1: Vec3, dir2: Vec3, material: Material) {
+        let tri1 = Triangle::new(
+            [pt, pt + dir1, pt + dir2],
+            [
+                Vec2::new(0.0, 0.0),
+                Vec2::new(1.0, 0.0),
+                Vec2::new(0.0, 1.0),
+            ],
+        );
+        let tri2 = Triangle::new(
+            [pt + dir2, pt + dir1, pt + dir2 + dir1],
+            [
+                Vec2::new(0.0, 1.0),
+                Vec2::new(1.0, 0.0),
+                Vec2::new(1.0, 1.0),
+            ],
+        );
+        let mesh = SubObject::new(vec![tri1, tri2]);
+        let quad_id = scene.add_mesh(mesh);
+        scene.add_blas_instance(quad_id, Transform::default(), material);
+    }
+
+    let look_from = Vec3::new(278.0, 278.0, -800.0);
+    let look_at = Vec3::new(278.0, 278.0, 0.0);
+    let look_up = Vec3::new(0.0, 1.0, 0.0);
+
+    let camera_transform = Transform::look_at(&look_from, &look_at, &look_up);
+
+    let camera = Camera::new(
+        width as f32 / height as f32,
+        40.0f32.to_radians(),
+        1.0,
+        0.0f32.to_radians(),
+    );
+
+    let cube = SubObject::new(load_obj_model("res/cube.obj"));
+    let mut scene = Scene::new();
+    let cube_id = scene.add_mesh(cube);
+
+    let red = Material::new_lambertian(Arc::new(SolidColor::new(Vec3::new(0.65, 0.05, 0.05))));
+    let white = Material::new_lambertian(Arc::new(SolidColor::new(Vec3::from_value(0.73))));
+    let green = Material::new_lambertian(Arc::new(SolidColor::new(Vec3::new(0.12, 0.45, 0.15))));
+    let light = Material::new_emissive(Vec3::new(15.0, 15.0, 15.0));
+
+    add_quad(
+        &mut scene,
+        Vec3::new(555.0, 0.0, 0.0),
+        Vec3::new(0.0, 555.0, 0.0),
+        Vec3::new(0.0, 0.0, 555.0),
+        green,
+    );
+
+    add_quad(
+        &mut scene,
+        Vec3::new(0.0, 0.0, 0.0),
+        Vec3::new(0.0, 555.0, 0.0),
+        Vec3::new(0.0, 0.0, 555.0),
+        red,
+    );
+
+    add_quad(
+        &mut scene,
+        Vec3::new(343.0, 554.0, 332.0),
+        Vec3::new(-130.0, 0.0, 0.0),
+        Vec3::new(0.0, 0.0, -105.0),
+        light,
+    );
+
+    add_quad(
+        &mut scene,
+        Vec3::new(0.0, 555.0, 0.0),
+        Vec3::new(555.0, 0.0, 0.0),
+        Vec3::new(0.0, 0.0, 555.0),
+        white.clone(),
+    );
+
+    add_quad(
+        &mut scene,
+        Vec3::new(0.0, 0.0, 0.0),
+        Vec3::new(555.0, 0.0, 0.0),
+        Vec3::new(0.0, 0.0, 555.0),
+        white.clone(),
+    );
+
+    add_quad(
+        &mut scene,
+        Vec3::new(0.0, 0.0, 555.0),
+        Vec3::new(555.0, 0.0, 0.0),
+        Vec3::new(0.0, 555.0, 0.0),
+        white.clone(),
+    );
+
+    scene.add_blas_instance(
+        cube_id,
+        Transform::new(
+            &Vec3::new(372.83, 165.0, 339.66),
+            &Quat::from_axis_angle(&Vec3::new(0.0, 1.0, 0.0), f32::consts::PI / 12.0),
+            &Vec3::new(165.0, 330.0, 165.0),
+        ),
+        white.clone(),
+    );
+
+    scene.add_blas_instance(
+        cube_id,
+        Transform::new(
+            &Vec3::new(182.97, 82.5, 168.95),
+            &Quat::from_axis_angle(&Vec3::new(0.0, 1.0, 0.0), -f32::consts::PI / 10.0),
+            &Vec3::new(165.0, 165.0, 165.0),
+        ),
+        white.clone(),
+    );
+
+    scene.finalize();
+
+    (camera, camera_transform, scene)
+}
+
+fn main() {
+    const WIDTH: u32 = 1200;
+    const HEIGHT: u32 = 500;
+    const SPP: u32 = 500;
+    const THREADS: u32 = 8;
+
+    let (camera, camera_transform, scene) = cornell_box(WIDTH, HEIGHT);
 
     let mut image = RgbImage::new(WIDTH, HEIGHT);
     let t1 = Instant::now();

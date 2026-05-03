@@ -142,7 +142,9 @@ impl Scene {
     }
 
     pub fn finalize(&mut self) {
-        self.spheres.2 = Some(BLAS::create(&self.spheres.0));
+        if self.spheres.0.primitives.len() > 0 {
+            self.spheres.2 = Some(BLAS::create(&self.spheres.0));
+        }
         self.tlas = Some(TLAS::create(self));
     }
 
@@ -202,12 +204,9 @@ impl Scene {
     pub fn trace(&self, ray: &Ray) -> (RayHit, Option<SceneHit<'_>>) {
         let mut ray_hit = RayHit::NONE;
 
-        self.spheres.2.as_ref().unwrap().traverse(
-            ray,
-            &mut ray_hit,
-            InstanceId::Sphere,
-            &self.spheres.0,
-        );
+        if let Some(sphere_blas) = self.spheres.2.as_ref() {
+            sphere_blas.traverse(ray, &mut ray_hit, InstanceId::Sphere, &self.spheres.0);
+        }
 
         self.tlas
             .as_ref()

@@ -278,7 +278,7 @@ fn cornell_box(width: u32, height: u32) -> (Camera, Transform, Scene) {
     let red = Material::new_lambertian(Arc::new(SolidColor::new(Vec3::new(0.65, 0.05, 0.05))));
     let white = Material::new_lambertian(Arc::new(SolidColor::new(Vec3::from_value(0.73))));
     let green = Material::new_lambertian(Arc::new(SolidColor::new(Vec3::new(0.12, 0.45, 0.15))));
-    let light = Material::new_emissive(Vec3::new(15.0, 15.0, 15.0));
+    let light = Material::new_emissive(Vec3::new(25.0, 25.0, 25.0));
 
     add_quad(
         &mut scene,
@@ -356,7 +356,7 @@ fn cornell_box(width: u32, height: u32) -> (Camera, Transform, Scene) {
 fn main() {
     const WIDTH: u32 = 1200;
     const HEIGHT: u32 = 500;
-    const SPP: u32 = 500;
+    const SPP: u32 = 1000;
     const THREADS: u32 = 8;
 
     let (camera, camera_transform, scene) = cornell_box(WIDTH, HEIGHT);

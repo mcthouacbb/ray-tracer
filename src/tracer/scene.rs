@@ -35,6 +35,18 @@ pub enum InstanceId {
     Mesh(u32),
 }
 
+pub trait SkyLight: Sync + Send {
+    fn get_color(&self, ray_dir: &Vec3) -> Vec3;
+}
+
+struct BlackSkyLight {}
+
+impl SkyLight for BlackSkyLight {
+    fn get_color(&self, _ray_dir: &Vec3) -> Vec3 {
+        Vec3::ZERO
+    }
+}
+
 pub struct SceneHit<'a> {
     normal: Vec3,
     front_face: bool,
@@ -83,6 +95,7 @@ pub struct Scene {
     meshes: Vec<(SubObject<Triangle>, BLAS)>,
     blas_instances: Vec<BLASInstance>,
     tlas: Option<TLAS>,
+    sky_light: Box<dyn SkyLight>,
 }
 
 impl Scene {
@@ -92,6 +105,7 @@ impl Scene {
             meshes: Vec::new(),
             blas_instances: Vec::new(),
             tlas: None,
+            sky_light: Box::new(BlackSkyLight {}),
         }
     }
 
@@ -121,6 +135,10 @@ impl Scene {
         self.spheres.0.primitives.push(sphere);
         self.spheres.1.push(material);
         id
+    }
+
+    pub fn set_sky_light(&mut self, sky_light: Box<dyn SkyLight>) {
+        self.sky_light = sky_light;
     }
 
     pub fn finalize(&mut self) {
@@ -209,5 +227,9 @@ impl Scene {
             result.push(InstanceId::Mesh(i as u32));
         }
         result
+    }
+
+    pub fn sky_color(&self, ray_dir: &Vec3) -> Vec3 {
+        self.sky_light.get_color(ray_dir)
     }
 }

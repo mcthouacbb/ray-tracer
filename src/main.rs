@@ -2,7 +2,7 @@ mod math;
 mod tracer;
 mod transform;
 
-use std::{fs::File, sync::Arc, time::Instant};
+use std::{f32, fs::File, sync::Arc, time::Instant};
 
 use image::{ImageFormat, ImageReader, RgbImage};
 use rand::{RngExt, SeedableRng, rngs::Xoshiro256PlusPlus};
@@ -15,7 +15,7 @@ use crate::{
         material::Material,
         primitives::{sphere::Sphere, triangle::Triangle},
         render::render_image,
-        scene::{Scene, SubObject},
+        scene::{Scene, SkyLight, SubObject},
         texture::{ImageTexture, SolidColor, SpatialChecker},
     },
     transform::Transform,
@@ -83,6 +83,28 @@ fn write_image(image: &RgbImage, filename: &str) {
 
     if let Err(err) = image.write_to(&mut file, ImageFormat::Png) {
         eprintln!("Cannot write image to file '{}': {}", filename, err);
+    }
+}
+
+struct BasicSkyLight {
+    sky_color_a: Vec3,
+    sky_color_b: Vec3,
+}
+
+impl BasicSkyLight {
+    fn new(sky_color_a: Vec3, sky_color_b: Vec3) -> Self {
+        Self {
+            sky_color_a,
+            sky_color_b,
+        }
+    }
+}
+
+impl SkyLight for BasicSkyLight {
+    fn get_color(&self, ray_dir: &Vec3) -> Vec3 {
+        let ray_dir = ray_dir.normalized();
+        let a = ray_dir.y() * 0.5 + 0.5;
+        (1.0 - a) * self.sky_color_a + a * self.sky_color_b
     }
 }
 
@@ -208,6 +230,11 @@ fn main() {
         Sphere::new(Vec3::new(4.0, 1.0, 0.0), 1.0),
         Material::new_metal(Arc::new(SolidColor::new(Vec3::new(0.7, 0.6, 0.5))), 0.0),
     );
+
+    scene.set_sky_light(Box::new(BasicSkyLight::new(
+        Vec3::from_value(0.35),
+        Vec3::new(0.175, 0.245, 0.35),
+    )));
 
     scene.finalize();
 

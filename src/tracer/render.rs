@@ -18,11 +18,6 @@ use crate::{
     transform::Transform,
 };
 
-pub fn sky_color(ray: &Ray) -> Vec3 {
-    let a = 0.5 * ray.dir().normalized().y() + 0.5;
-    (1.0 - a) * Vec3::new(1.0, 1.0, 1.0) + a * Vec3::new(0.5, 0.7, 1.0)
-}
-
 pub fn linear_to_srgb(linear: f32) -> f32 {
     if linear < 0.0031308 {
         linear * 12.92
@@ -53,7 +48,7 @@ pub fn ray_color(ray: &Ray, scene: &Scene, rng: &mut impl RngExt, depth: u32) ->
         let emissive_color = scene_hit.material().emitted();
         emissive_color + scatter_color
     } else {
-        0.35 * sky_color(&ray)
+        scene.sky_color(&ray.dir())
     }
 }
 
